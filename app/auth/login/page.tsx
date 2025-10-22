@@ -1,0 +1,18 @@
+import LoginForm from '@/components/auth/LoginForm'
+import AuthLayout from '@/components/auth/AuthLayout'
+
+export default function LoginPage() {
+    return (
+        <AuthLayout
+            title="Welcome Back"
+            subtitle="Sign in to access your saved talks and continue creating inspiring content"
+        >
+            <LoginForm />
+        </AuthLayout>
+    )
+}
+
+export const metadata = {
+    title: 'Sign In - LDS Talk Generator',
+    description: 'Sign in to access your saved talks and account settings',
+}
