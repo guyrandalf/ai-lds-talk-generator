@@ -43,7 +43,7 @@ next-env.d.ts
 
 /app/generated/prisma
 
-.kiro/specs/pulpit-pal
+.kiro/specs/lds-talk-generator
 .kiro/specs/platform-enhancements
-
+.kiro/specs/type-organization
 /supabase/

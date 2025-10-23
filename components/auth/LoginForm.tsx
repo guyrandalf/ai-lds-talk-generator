@@ -14,7 +14,7 @@ export default function LoginForm() {
     const [error, setError] = useState<string>('')
     const [isLoading, setIsLoading] = useState(false)
     const router = useRouter()
-    const { refreshUser } = useAuth()
+    const { setUser } = useAuth()
 
 
     async function handleSubmit(formData: FormData) {
@@ -24,10 +24,10 @@ export default function LoginForm() {
         try {
             const result = await loginUser(formData)
 
-            if (result.success) {
+            if (result.success && result.user) {
                 toast.success('Welcome back! You have been successfully signed in.')
-                // Refresh the auth state to update the navigation
-                await refreshUser()
+                // Immediately update the auth state with the returned user data for instant UI feedback
+                setUser(result.user)
                 router.push('/dashboard')
             } else {
                 setError(result.error || 'Login failed')

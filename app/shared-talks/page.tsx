@@ -1,39 +1,6 @@
 import { getCurrentUser } from '@/lib/actions/auth'
 import { redirect } from 'next/navigation'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { withLazyLoading } from '@/components/ui/LazyLoader'
-import { Skeleton } from '@/components/ui/skeleton'
-
-const SharedTalksManager = withLazyLoading(
-    () => import('@/components/SharedTalksManager').then(mod => ({ default: mod.SharedTalksManager })),
-    {
-        fallback: (
-            <div className="space-y-4">
-                <Skeleton className="h-8 w-64" />
-                <div className="space-y-3">
-                    <Skeleton className="h-20 w-full" />
-                    <Skeleton className="h-20 w-full" />
-                    <Skeleton className="h-20 w-full" />
-                </div>
-            </div>
-        )
-    }
-)
-
-const MySharedTalks = withLazyLoading(
-    () => import('@/components/MySharedTalks').then(mod => ({ default: mod.MySharedTalks })),
-    {
-        fallback: (
-            <div className="space-y-4">
-                <Skeleton className="h-8 w-64" />
-                <div className="space-y-3">
-                    <Skeleton className="h-20 w-full" />
-                    <Skeleton className="h-20 w-full" />
-                </div>
-            </div>
-        )
-    }
-)
+import SharedTalksClient from './SharedTalksClient'
 
 export default async function SharedTalksPage() {
     const user = await getCurrentUser()
@@ -54,20 +21,7 @@ export default async function SharedTalksPage() {
                 </div>
 
                 {/* Tabs for different views */}
-                <Tabs defaultValue="received" className="space-y-6">
-                    <TabsList className="grid w-full grid-cols-2 max-w-md">
-                        <TabsTrigger value="received">Received</TabsTrigger>
-                        <TabsTrigger value="shared">My Shares</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="received" className="space-y-6">
-                        <SharedTalksManager />
-                    </TabsContent>
-
-                    <TabsContent value="shared" className="space-y-6">
-                        <MySharedTalks />
-                    </TabsContent>
-                </Tabs>
+                <SharedTalksClient />
             </div>
         </div>
     )

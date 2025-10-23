@@ -9,10 +9,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { toast } from "sonner"
 import { getReceivedSharedTalks, respondToSharedTalk } from "@/lib/actions/talks"
 
-interface SharedTalk {
+interface ReceivedSharedTalk {
     id: string
     talk: {
-        id: string
+        id?: string
         title: string
         content: string
         duration: number
@@ -29,8 +29,9 @@ interface SharedTalk {
     createdAt: Date
 }
 
-export function SharedTalksManager() {
-    const [sharedTalks, setSharedTalks] = React.useState<SharedTalk[]>([])
+
+function SharedTalksManager() {
+    const [sharedTalks, setSharedTalks] = React.useState<ReceivedSharedTalk[]>([])
     const [isLoading, setIsLoading] = React.useState(true)
     const [respondingTo, setRespondingTo] = React.useState<string | null>(null)
 
@@ -268,3 +269,5 @@ export function SharedTalksManager() {
         </div>
     )
 }
+
+export default SharedTalksManager

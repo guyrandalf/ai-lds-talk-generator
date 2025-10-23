@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AuthLayout } from '@/components/auth/AuthLayout';
+import AuthLayout from '@/components/auth/AuthLayout';
 import { toast } from 'sonner';
 
 export default function ForgotPasswordPage() {
@@ -51,7 +51,7 @@ export default function ForgotPasswordPage() {
 
     if (isSubmitted) {
         return (
-            <AuthLayout>
+            <AuthLayout title="Check Your Email" subtitle="We've sent password reset instructions to your email address if an account exists.">
                 <Card className="w-full max-w-md">
                     <CardHeader className="text-center">
                         <CardTitle>Check Your Email</CardTitle>
@@ -87,13 +87,9 @@ export default function ForgotPasswordPage() {
     }
 
     return (
-        <AuthLayout>
+        <AuthLayout title="Forgot Password" subtitle="Enter your email address and we'll send you a link to reset your password.">
             <Card className="w-full max-w-md">
                 <CardHeader className="text-center">
-                    <CardTitle>Forgot Password</CardTitle>
-                    <CardDescription>
-                        Enter your email address and we'll send you a link to reset your password.
-                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">

@@ -64,6 +64,27 @@ export interface ProcessedQuestionnaireResult {
   }
 }
 
+export interface SharedTalk {
+  id: string
+  talk: {
+    id?: string
+    title: string
+    content: string
+    duration: number
+    meetingType: string
+  }
+  sharedWith: {
+    id: string
+    firstName: string
+    lastName: string
+    email: string
+  }
+  message?: string
+  status: string
+  createdAt: Date
+  respondedAt?: Date
+}
+
 // Validation schema for questionnaire
 const questionnaireSchema = z.object({
   topic: z.string().min(1, 'Topic is required').max(200, 'Topic is too long'),
@@ -801,13 +822,16 @@ export async function generateTalk(questionnaire: TalkQuestionnaireData): Promis
   talk?: GeneratedTalk
   error?: string
   warnings?: string[]
-  violations?: any[]
+  violations?: unknown[]
 }> {
   try {
     console.log('Starting talk generation for topic:', questionnaire.topic)
 
     // Get user session for security context
     const session = await getSession()
+
+    // Generate session ID for tracking
+    const sessionId = generateSessionId()
 
     // Validate questionnaire
     const validation = await validateQuestionnaireForGeneration(questionnaire)
@@ -832,12 +856,12 @@ export async function generateTalk(questionnaire: TalkQuestionnaireData): Promis
     const { convertViolationsToFeedback } = await import('../utils/contentFeedback')
 
     const filterResult = await validateQuestionnaireInput(questionnaire, {
-      userId: session?.user?.id,
-      sessionId: session?.sessionId
+      userId: session?.userId,
+      sessionId: sessionId
     })
 
     if (!filterResult.success) {
-      const violations = convertViolationsToFeedback(filterResult.securityViolations)
+      const violations = await convertViolationsToFeedback(filterResult.securityViolations)
       return {
         success: false,
         error: filterResult.errors[0] || 'Content validation failed',
@@ -919,12 +943,12 @@ Provide the talk content in a clear, readable format with proper paragraphs and 
     // Validate AI response with security filter
     const { validateAIResponse } = await import('../security/aiContentFilter')
     const aiValidation = await validateAIResponse(generatedContent, {
-      userId: session?.user?.id,
-      sessionId: session?.sessionId
+      userId: session?.userId,
+      sessionId: sessionId
     })
 
     if (!aiValidation.success) {
-      const violations = convertViolationsToFeedback(aiValidation.securityViolations)
+      const violations = await convertViolationsToFeedback(aiValidation.securityViolations)
       console.error('AI response validation failed:', aiValidation.errors)
       return {
         success: false,
@@ -2047,8 +2071,8 @@ export async function getSavedTalkById(talkId: string): Promise<{
           gospelLibraryLinks: savedTalk.gospelLibraryLinks,
           audienceType: (savedTalk.preferences as TalkPreferences)?.audienceType,
           preferredThemes: (savedTalk.preferences as TalkPreferences)?.preferredThemes || [],
-          customThemes: (savedTalk as unknown).customThemes || [],
-          audienceContext: (savedTalk as unknown).audienceContext || undefined,
+          customThemes: (savedTalk as any).customThemes || [],
+          audienceContext: (savedTalk as any).audienceContext || undefined,
           specificScriptures: (savedTalk.preferences as TalkPreferences)?.specificScriptures || []
         },
         createdAt: savedTalk.createdAt
@@ -2474,7 +2498,7 @@ export async function respondToSharedTalk(
               gospelLibraryLinks: share.talk.gospelLibraryLinks,
               audienceContext: (share.talk as any).audienceContext,
               customThemes: (share.talk as any).customThemes || [],
-              preferences: share.talk.preferences,
+              preferences: share.talk.preferences as any,
               userId: session.userId
             }
           })

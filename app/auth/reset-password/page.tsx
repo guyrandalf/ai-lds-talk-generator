@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AuthLayout } from '@/components/auth/AuthLayout';
+import AuthLayout from '@/components/auth/AuthLayout';
 import { toast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
 
@@ -128,7 +128,7 @@ function ResetPasswordForm() {
 
     if (isValidating) {
         return (
-            <AuthLayout>
+            <AuthLayout title="Reset Password" subtitle="Validating your reset link...">
                 <Card className="w-full max-w-md">
                     <CardContent className="flex items-center justify-center py-8">
                         <div className="text-center">
@@ -147,13 +147,9 @@ function ResetPasswordForm() {
 
     if (isSuccess) {
         return (
-            <AuthLayout>
+            <AuthLayout title="Password Reset Successful" subtitle="Your password has been reset successfully. You can now sign in with your new password.">
                 <Card className="w-full max-w-md">
                     <CardHeader className="text-center">
-                        <CardTitle>Password Reset Successful</CardTitle>
-                        <CardDescription>
-                            Your password has been reset successfully. You can now sign in with your new password.
-                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Link href="/auth/login">
@@ -168,13 +164,9 @@ function ResetPasswordForm() {
     }
 
     return (
-        <AuthLayout>
+        <AuthLayout title="Reset Password" subtitle="Enter your new password below.">
             <Card className="w-full max-w-md">
                 <CardHeader className="text-center">
-                    <CardTitle>Reset Password</CardTitle>
-                    <CardDescription>
-                        Enter your new password below.
-                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">
@@ -265,7 +257,7 @@ function ResetPasswordForm() {
 export default function ResetPasswordPage() {
     return (
         <Suspense fallback={
-            <AuthLayout>
+            <AuthLayout title="Reset Password" subtitle="Loading...">
                 <Card className="w-full max-w-md">
                     <CardContent className="flex items-center justify-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

@@ -1,36 +1,17 @@
 "use client"
 
 import * as React from "react"
-import { User, Calendar, MessageSquare, Eye } from "lucide-react"
+import { User, MessageSquare, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { toast } from "sonner"
-import { getSharedTalksByUser } from "@/lib/actions/talks"
+import { getSharedTalksByUser, SharedTalk } from "@/lib/actions/talks"
 
-interface SharedTalk {
-    id: string
-    talk: {
-        id: string
-        title: string
-        content: string
-        duration: number
-        meetingType: string
-    }
-    sharedWith: {
-        id: string
-        firstName: string
-        lastName: string
-        email: string
-    }
-    message?: string
-    status: string
-    createdAt: Date
-    respondedAt?: Date
-}
 
-export function MySharedTalks() {
+
+function MySharedTalks() {
     const [sharedTalks, setSharedTalks] = React.useState<SharedTalk[]>([])
     const [isLoading, setIsLoading] = React.useState(true)
 
@@ -84,10 +65,11 @@ export function MySharedTalks() {
         const groups: { [talkId: string]: SharedTalk[] } = {}
 
         sharedTalks.forEach(share => {
-            if (!groups[share.talk.id]) {
-                groups[share.talk.id] = []
+            const talkId = share.talk.id || share.id // fallback to share.id if talk.id is undefined
+            if (!groups[talkId]) {
+                groups[talkId] = []
             }
-            groups[share.talk.id].push(share)
+            groups[talkId].push(share)
         })
 
         return groups
@@ -110,7 +92,7 @@ export function MySharedTalks() {
                 <CardHeader>
                     <CardTitle>My Shared Talks</CardTitle>
                     <CardDescription>
-                        You haven't shared any talks yet.
+                        You haven&apos;t shared any talks yet.
                     </CardDescription>
                 </CardHeader>
             </Card>
@@ -267,3 +249,5 @@ export function MySharedTalks() {
         </div>
     )
 }
+
+export default MySharedTalks

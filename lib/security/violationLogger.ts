@@ -70,7 +70,7 @@ export async function logSecurityViolation(
 }> {
     try {
         // Get request metadata
-        const headersList = headers()
+        const headersList = await headers()
         const ipAddress = getClientIP(headersList)
         const userAgent = headersList.get('user-agent') || undefined
 

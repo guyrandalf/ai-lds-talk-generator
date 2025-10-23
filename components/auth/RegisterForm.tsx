@@ -11,7 +11,7 @@ export default function RegisterForm() {
     const [error, setError] = useState<string>('')
     const [isLoading, setIsLoading] = useState(false)
     const router = useRouter()
-    const { refreshUser } = useAuth()
+    const { setUser } = useAuth()
 
     async function handleSubmit(formData: FormData) {
         setIsLoading(true)
@@ -19,9 +19,9 @@ export default function RegisterForm() {
 
         const result = await registerUser(formData)
 
-        if (result.success) {
-            // Refresh the auth state to update the navigation
-            await refreshUser()
+        if (result.success && result.user) {
+            // Immediately update the auth state with the returned user data for instant UI feedback
+            setUser(result.user)
             router.push('/dashboard')
         } else {
             setError(result.error || 'Registration failed')
