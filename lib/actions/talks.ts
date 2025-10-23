@@ -23,6 +23,7 @@ export interface TalkQuestionnaireData {
   personalStory?: string
   gospelLibraryLinks: string[]
   audienceType?: string
+  speakerAge?: string
   preferredThemes: string[]
   specificScriptures?: string[]
 }
@@ -71,6 +72,7 @@ const questionnaireSchema = z.object({
   personalStory: z.string().max(5000, 'Personal story is too long').optional(),
   gospelLibraryLinks: z.array(z.string()).default([]),
   audienceType: z.string().optional(),
+  speakerAge: z.string().optional(),
   preferredThemes: z.array(z.string()).default([]),
   specificScriptures: z.array(z.string()).default([])
 })
@@ -106,6 +108,7 @@ export async function processQuestionnaire(formData: FormData): Promise<Processe
       meetingType: formData.get('meetingType') as 'sacrament' | 'stake_conference',
       personalStory: sanitizationResult.sanitizedData.personalStory || undefined,
       audienceType: sanitizationResult.sanitizedData.audienceType || undefined,
+      speakerAge: formData.get('speakerAge') as string || undefined,
       gospelLibraryLinks: formData.getAll('gospelLibraryLinks') as string[],
       preferredThemes: formData.getAll('preferredThemes') as string[],
       specificScriptures: formData.getAll('specificScriptures') as string[]
@@ -567,7 +570,8 @@ export async function formatQuestionnaireForAI(questionnaire: TalkQuestionnaireD
     // Main request
     promptSections.push(`TALK REQUEST:
 Generate a ${questionnaire.duration}-minute ${questionnaire.meetingType.replace('_', ' ')} talk on "${questionnaire.topic}".
-Target length: approximately ${targetWordCount} words.`)
+Target length: approximately ${targetWordCount} words.
+Speaker age range: ${questionnaire.speakerAge || 'Adult'}`)
 
     // Meeting context
     if (questionnaire.meetingType === 'sacrament') {
@@ -591,12 +595,62 @@ This is for a stake conference. Focus on:
       promptSections.push(`AUDIENCE: ${questionnaire.audienceType}`)
     }
 
+    // Speaker age-specific guidance
+    if (questionnaire.speakerAge) {
+      let ageGuidance = ''
+
+      if (questionnaire.speakerAge.includes('Primary Child')) {
+        ageGuidance = `SPEAKER AGE GUIDANCE:
+The speaker is a Primary child (3-11 years old). Please:
+- Use simple, age-appropriate language and concepts
+- Keep sentences short and clear
+- Focus on basic gospel principles they can understand
+- Include simple examples from their daily life
+- Avoid complex doctrinal discussions
+- Use first person but in a way that sounds natural for a child
+- If no personal story is provided, reference simple, relatable experiences like family prayers, helping others, or feeling the Spirit during Primary`
+      } else if (questionnaire.speakerAge.includes('Youth')) {
+        ageGuidance = `SPEAKER AGE GUIDANCE:
+The speaker is a youth (12-18 years old). Please:
+- Use language appropriate for teenagers
+- Include examples relevant to youth experiences (school, friends, seminary, mutual activities)
+- Focus on gospel principles that help with teenage challenges
+- Use first person in a way that sounds authentic for a young person
+- If no personal story is provided, reference experiences like seminary lessons, youth activities, service projects, or testimony-building moments
+- Avoid overly mature language or experiences that don't fit their age`
+      } else if (questionnaire.speakerAge.includes('Young Adult')) {
+        ageGuidance = `SPEAKER AGE GUIDANCE:
+The speaker is a young adult (18-35 years old). Please:
+- Use contemporary but reverent language
+- Include examples relevant to young adult experiences (college, career, dating, marriage, early parenthood)
+- Focus on gospel principles for life transitions and building testimonies
+- If no personal story is provided, reference experiences like mission service, institute, young adult activities, or early adult challenges`
+      } else {
+        ageGuidance = `SPEAKER AGE GUIDANCE:
+The speaker is an adult (36+ years old). Please:
+- Use mature, thoughtful language appropriate for an experienced adult
+- Include examples from adult life experiences
+- Draw on deeper gospel understanding and life lessons
+- If no personal story is provided, reference experiences like parenting, career challenges, service in callings, or life's trials and blessings`
+      }
+
+      promptSections.push(ageGuidance)
+    }
+
     // Personal story integration
     if (questionnaire.personalStory?.trim()) {
       promptSections.push(`PERSONAL STORY TO INCORPORATE:
 "${questionnaire.personalStory.trim()}"
 
 Please weave this personal experience naturally into the talk, using it to illustrate gospel principles and connect with the audience.`)
+    } else {
+      promptSections.push(`PERSONAL EXPERIENCE GUIDANCE:
+Since no specific personal story was provided, please:
+- Reference appropriate experiences from Church leaders' talks and teachings
+- Use general but relatable examples that fit the speaker's age range
+- Include references to common spiritual experiences (feeling the Spirit, answered prayers, scripture study insights)
+- Avoid creating fictional personal experiences - instead draw from general Church leader experiences and teachings
+- Make it feel personal through testimony and application rather than invented stories`)
     }
 
     // Gospel Library references

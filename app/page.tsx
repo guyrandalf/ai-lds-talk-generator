@@ -12,7 +12,7 @@ export default async function Home() {
         {/* Background Pattern */}
         <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900"></div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 sm:pt-24 sm:pb-20">
+        <div className="relative max-w-7xl mx-auto px-6 sm:px-6 lg:px-8 pt-20 pb-16 sm:pt-24 sm:pb-20">
           <div className="text-center">
             {/* Main Heading */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 dark:text-white mb-6">
@@ -100,7 +100,7 @@ export default async function Home() {
 
       {/* Features Section */}
       <div className="py-16 bg-white dark:bg-gray-900 transition-colors">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
               Why Choose LDS Talk Generator?
@@ -149,7 +149,7 @@ export default async function Home() {
 
       {/* Call to Action */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 py-16">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center px-6 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-white mb-4">
             Ready to Create Your Next Talk?
           </h2>

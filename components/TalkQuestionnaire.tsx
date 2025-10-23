@@ -12,6 +12,7 @@ export interface TalkQuestionnaireData {
     personalStory?: string
     gospelLibraryLinks: string[]
     audienceType?: string
+    speakerAge?: string
     preferredThemes: string[]
     specificScriptures?: string[]
 }
@@ -30,6 +31,7 @@ export default function TalkQuestionnaire({ onSubmit, isLoading = false, initial
         personalStory: '',
         gospelLibraryLinks: [''],
         audienceType: '',
+        speakerAge: '',
         preferredThemes: [],
         specificScriptures: ['']
     })
@@ -45,9 +47,16 @@ export default function TalkQuestionnaire({ onSubmit, isLoading = false, initial
     const audienceTypes = [
         'General Congregation',
         'Youth (12-18)',
-        'Young Adults (18-30)',
+        'Young Single Adults (18-35)',
         'Adults',
         'Mixed Ages'
+    ]
+
+    const speakerAgeRanges = [
+        'Primary Child (3-11)',
+        'Youth (12-18)',
+        'Young Adult (18-35)',
+        'Adult (36+)'
     ]
 
     const commonThemes = [
@@ -123,6 +132,10 @@ export default function TalkQuestionnaire({ onSubmit, isLoading = false, initial
 
         if (formData.duration < 5 || formData.duration > 60) {
             newErrors.duration = 'Duration must be between 5 and 60 minutes'
+        }
+
+        if (!formData.speakerAge?.trim()) {
+            newErrors.speakerAge = 'Speaker age range is required'
         }
 
         // Validate Gospel Library links format
@@ -259,6 +272,29 @@ export default function TalkQuestionnaire({ onSubmit, isLoading = false, initial
                                         ))}
                                     </select>
                                 </div>
+
+                                <div>
+                                    <label htmlFor="speakerAge" className="block text-sm font-medium text-gray-700 mb-2">
+                                        Speaker Age Range
+                                        <span className="text-red-500 ml-1">*</span>
+                                    </label>
+                                    <select
+                                        id="speakerAge"
+                                        value={formData.speakerAge}
+                                        onChange={(e) => handleInputChange('speakerAge', e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                        disabled={isLoading}
+                                        required
+                                    >
+                                        <option value="">Select your age range</option>
+                                        {speakerAgeRanges.map(age => (
+                                            <option key={age} value={age}>{age}</option>
+                                        ))}
+                                    </select>
+                                    {errors.speakerAge && (
+                                        <p className="text-red-500 text-sm mt-1">{errors.speakerAge}</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -301,7 +337,7 @@ export default function TalkQuestionnaire({ onSubmit, isLoading = false, initial
 
                             <div className="space-y-4">
                                 <p className="text-sm text-gray-600">
-                                    Add links to specific talks, scriptures, or other content from the Gospel Library that you'd like to reference.
+                                    Add links to specific talks, scriptures, or other content from the Gospel Library that you&apos;d like to reference.
                                 </p>
 
                                 {(formData.gospelLibraryLinks || []).map((link, index) => (
@@ -358,7 +394,7 @@ export default function TalkQuestionnaire({ onSubmit, isLoading = false, initial
                             </h2>
 
                             <p className="text-sm text-gray-600 mb-4">
-                                Select themes you'd like to emphasize in your talk (optional):
+                                Select themes you&apos;d like to emphasize in your talk (optional):
                             </p>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -390,7 +426,7 @@ export default function TalkQuestionnaire({ onSubmit, isLoading = false, initial
 
                             <div className="space-y-4">
                                 <p className="text-sm text-gray-600">
-                                    List specific scriptures you'd like to reference (e.g., "John 3:16", "2 Nephi 2:25"):
+                                    List specific scriptures you&apos;d like to reference (e.g., &quot;John 3:16&quot;, &quot;2 Nephi 2:25&quot;):
                                 </p>
 
                                 {(formData.specificScriptures || []).map((scripture, index) => (

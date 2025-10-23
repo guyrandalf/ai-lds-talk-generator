@@ -60,7 +60,7 @@ function GeneratePageContent() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-6xl mx-auto px-6 sm:px-6 lg:px-8">
                 {/* Error Display */}
                 {error && (
                     <div className="mb-8 bg-red-50 border border-red-200 rounded-xl p-4">
@@ -139,7 +139,7 @@ export default function GeneratePage() {
     return (
         <Suspense fallback={
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="max-w-6xl mx-auto px-6 sm:px-6 lg:px-8">
                     <div className="text-center py-16">
                         <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
                             <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
