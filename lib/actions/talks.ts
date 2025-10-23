@@ -67,7 +67,7 @@ const questionnaireSchema = z.object({
   topic: z.string().min(1, 'Topic is required').max(200, 'Topic is too long'),
   duration: z.number().min(5, 'Duration must be at least 5 minutes').max(60, 'Duration cannot exceed 60 minutes'),
   meetingType: z.enum(['sacrament', 'stake_conference'], {
-    errorMap: () => ({ message: 'Please select a valid meeting type' })
+    message: 'Please select a valid meeting type'
   }),
   personalStory: z.string().max(5000, 'Personal story is too long').optional(),
   gospelLibraryLinks: z.array(z.string()).default([]),

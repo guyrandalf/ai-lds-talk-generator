@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useToast, toast } from '@/components/ui/Toast'
+import { toast } from 'sonner'
 import { FormLoadingOverlay } from '@/components/ui/LoadingOverlay'
 import { ButtonLoadingSpinner } from '@/components/ui/LoadingSpinner'
 
@@ -37,7 +37,7 @@ export default function TalkQuestionnaire({ onSubmit, isLoading = false, initial
     })
 
     const [errors, setErrors] = useState<Record<string, string>>({})
-    const { addToast } = useToast()
+
 
     const meetingTypes = [
         { value: 'sacrament', label: 'Sacrament Meeting' },
@@ -155,10 +155,7 @@ export default function TalkQuestionnaire({ onSubmit, isLoading = false, initial
         e.preventDefault()
 
         if (!validateForm()) {
-            addToast(toast.error(
-                'Please fix the errors',
-                'Check the form for validation errors and try again.'
-            ))
+            toast.error('Please fix the errors and try again.')
             return
         }
 
@@ -169,10 +166,7 @@ export default function TalkQuestionnaire({ onSubmit, isLoading = false, initial
             specificScriptures: formData.specificScriptures?.filter(scripture => scripture.trim()) || []
         }
 
-        addToast(toast.info(
-            'Processing questionnaire',
-            'We\'re preparing to generate your talk...'
-        ))
+        toast.success('Processing questionnaire - preparing to generate your talk...')
 
         onSubmit(cleanedData)
     }
@@ -180,7 +174,7 @@ export default function TalkQuestionnaire({ onSubmit, isLoading = false, initial
     return (
         <div className="max-w-4xl mx-auto">
             <FormLoadingOverlay isLoading={isLoading} loadingText="Generating your talk...">
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-8 transition-colors">
+                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
                     {/* Header */}
                     <div className="text-center mb-8">
                         <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -188,8 +182,8 @@ export default function TalkQuestionnaire({ onSubmit, isLoading = false, initial
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                         </div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Personalize Your Talk</h1>
-                        <p className="text-gray-600 dark:text-gray-300 text-lg">Help us create a meaningful talk that reflects your voice and testimony</p>
+                        <h1 className="text-3xl font-bold text-gray-900 mb-2">Personalize Your Talk</h1>
+                        <p className="text-gray-600 text-lg">Help us create a meaningful talk that reflects your voice and testimony</p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-8">

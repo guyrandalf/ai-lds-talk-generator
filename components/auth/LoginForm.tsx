@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { loginUser } from '@/lib/actions/auth'
 import { Mail, Lock, AlertCircle } from 'lucide-react'
-import { useToast, toast } from '@/components/ui/Toast'
+import { toast } from 'sonner'
 import { ButtonLoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { FormLoadingOverlay } from '@/components/ui/LoadingOverlay'
 
@@ -13,7 +13,7 @@ export default function LoginForm() {
     const [error, setError] = useState<string>('')
     const [isLoading, setIsLoading] = useState(false)
     const router = useRouter()
-    const { addToast } = useToast()
+
 
     async function handleSubmit(formData: FormData) {
         setIsLoading(true)
@@ -23,23 +23,16 @@ export default function LoginForm() {
             const result = await loginUser(formData)
 
             if (result.success) {
-                addToast(toast.success(
-                    'Welcome back!',
-                    'You have been successfully signed in.',
-                    { duration: 3000 }
-                ))
+                toast.success('Welcome back! You have been successfully signed in.')
                 router.push('/dashboard')
             } else {
                 setError(result.error || 'Login failed')
-                addToast(toast.error(
-                    'Sign In Failed',
-                    result.error || 'Please check your credentials and try again.'
-                ))
+                toast.error(result.error || 'Please check your credentials and try again.')
             }
         } catch (error) {
             const errorMessage = 'An unexpected error occurred. Please try again.'
             setError(errorMessage)
-            addToast(toast.error('Sign In Error', errorMessage))
+            toast.error(errorMessage)
         } finally {
             setIsLoading(false)
         }

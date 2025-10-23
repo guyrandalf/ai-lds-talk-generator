@@ -122,7 +122,7 @@ export async function registerUser(formData: FormData): Promise<AuthResult> {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0].message
+        error: error.issues[0].message
       }
     }
 
@@ -203,7 +203,7 @@ export async function loginUser(formData: FormData): Promise<AuthResult> {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0].message
+        error: error.issues[0].message
       }
     }
 
@@ -368,7 +368,7 @@ export async function updateProfile(formData: FormData): Promise<AuthResult> {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0].message
+        error: error.issues[0].message
       }
     }
 
@@ -473,7 +473,7 @@ export async function changePassword(formData: FormData): Promise<AuthResult> {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0].message
+        error: error.issues[0].message
       }
     }
 
