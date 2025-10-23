@@ -1,41 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { getCurrentUser } from '@/lib/actions/auth'
 import LogoutButton from './auth/LogoutButton'
 import MobileNavigationDrawer from './MobileNavigationDrawer'
 import { useNavigation } from '@/hooks/useNavigation'
+import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { BookOpen } from 'lucide-react'
 
-interface User {
-    id: string
-    firstName: string
-    lastName: string
-    email: string
-}
-
 function Navigation() {
-    const [user, setUser] = useState<User | null>(null)
-    const [loading, setLoading] = useState(true)
+    const { user, loading } = useAuth()
     const { isMobileMenuOpen, toggleMobileMenu } = useNavigation()
-
-    useEffect(() => {
-        async function fetchUser() {
-            try {
-                const currentUser = await getCurrentUser()
-                setUser(currentUser)
-            } catch (error) {
-                console.error('Error fetching user:', error)
-                setUser(null)
-            } finally {
-                setLoading(false)
-            }
-        }
-        fetchUser()
-    }, [])
 
     if (loading) {
         return (
@@ -49,7 +25,7 @@ function Navigation() {
                                     <BookOpen className="w-5 h-5 text-white" />
                                 </div>
                                 <span className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                                    LDS Talk Generator
+                                    Pulpit Pal
                                 </span>
                             </Link>
                         </div>
@@ -73,7 +49,7 @@ function Navigation() {
                                 <BookOpen className="w-5 h-5 text-white" />
                             </div>
                             <span className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                                LDS Talk Generator
+                                Pulpit Pal
                             </span>
                         </Link>
                     </div>
@@ -101,6 +77,11 @@ function Navigation() {
                                     <Button variant="ghost" asChild>
                                         <Link href="/dashboard" className="text-gray-700 hover:text-blue-600 font-medium">
                                             Dashboard
+                                        </Link>
+                                    </Button>
+                                    <Button variant="ghost" asChild>
+                                        <Link href="/shared-talks" className="text-gray-700 hover:text-blue-600 font-medium">
+                                            Shared Talks
                                         </Link>
                                     </Button>
                                     <Button variant="ghost" asChild>

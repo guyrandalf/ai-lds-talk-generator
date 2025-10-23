@@ -4,6 +4,13 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { GeneratedTalk, updateSavedTalk } from '@/lib/actions/talks'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Card, CardContent } from '@/components/ui/card'
+import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 
 interface TalkEditFormProps {
     talk: GeneratedTalk
@@ -51,7 +58,7 @@ export default function TalkEditForm({ talk }: TalkEditFormProps) {
             } else {
                 setError(result.error || 'Failed to save changes')
             }
-        } catch (err) {
+        } catch {
             setError('An unexpected error occurred while saving')
         } finally {
             setIsSaving(false)
@@ -63,14 +70,12 @@ export default function TalkEditForm({ talk }: TalkEditFormProps) {
     }
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
+        <Card>
             {/* Success Message */}
             {success && (
-                <div className="p-4 bg-green-50 border-l-4 border-green-400 rounded-t-2xl">
+                <div className="p-4 bg-green-50 border-l-4 border-green-400 rounded-t-lg">
                     <div className="flex">
-                        <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                        <CheckCircle className="w-5 h-5 text-green-400" />
                         <p className="ml-3 text-sm text-green-700">
                             Talk saved successfully! Redirecting to view...
                         </p>
@@ -80,142 +85,121 @@ export default function TalkEditForm({ talk }: TalkEditFormProps) {
 
             {/* Error Message */}
             {error && (
-                <div className="p-4 bg-red-50 border-l-4 border-red-400 rounded-t-2xl">
+                <div className="p-4 bg-red-50 border-l-4 border-red-400 rounded-t-lg">
                     <div className="flex">
-                        <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                        <AlertCircle className="w-5 h-5 text-red-400" />
                         <p className="ml-3 text-sm text-red-700">{error}</p>
                     </div>
                 </div>
             )}
 
-            <div className="p-8">
+            <CardContent className="p-8">
                 <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6">
                     {/* Basic Information */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-                                Talk Title
-                            </label>
-                            <input
+                        <div className="space-y-2">
+                            <Label htmlFor="title">Talk Title</Label>
+                            <Input
                                 type="text"
                                 id="title"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 placeholder="Enter talk title"
                                 required
                             />
                         </div>
 
-                        <div>
-                            <label htmlFor="topic" className="block text-sm font-medium text-gray-700 mb-2">
-                                Topic
-                            </label>
-                            <input
+                        <div className="space-y-2">
+                            <Label htmlFor="topic">Topic</Label>
+                            <Input
                                 type="text"
                                 id="topic"
                                 value={topic}
                                 onChange={(e) => setTopic(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 placeholder="Talk topic"
                             />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-2">
-                                Duration (minutes)
-                            </label>
-                            <input
+                        <div className="space-y-2">
+                            <Label htmlFor="duration">Duration (minutes)</Label>
+                            <Input
                                 type="number"
                                 id="duration"
                                 value={duration}
                                 onChange={(e) => setDuration(parseInt(e.target.value) || 15)}
                                 min="5"
                                 max="60"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 required
                             />
                         </div>
 
-                        <div>
-                            <label htmlFor="meetingType" className="block text-sm font-medium text-gray-700 mb-2">
-                                Meeting Type
-                            </label>
-                            <select
-                                id="meetingType"
-                                value={meetingType}
-                                onChange={(e) => setMeetingType(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                required
-                            >
-                                <option value="sacrament">Sacrament Meeting</option>
-                                <option value="stake_conference">Stake Conference</option>
-                            </select>
+                        <div className="space-y-2">
+                            <Label htmlFor="meetingType">Meeting Type</Label>
+                            <Select value={meetingType} onValueChange={setMeetingType}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select meeting type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="sacrament">Sacrament Meeting</SelectItem>
+                                    <SelectItem value="stake_conference">Stake Conference</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
 
                     {/* Talk Content */}
-                    <div>
-                        <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
-                            Talk Content
-                        </label>
-                        <textarea
+                    <div className="space-y-2">
+                        <Label htmlFor="content">Talk Content</Label>
+                        <Textarea
                             id="content"
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
                             rows={20}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
+                            className="resize-y"
                             placeholder="Enter your talk content here..."
                             required
                         />
-                        <p className="mt-2 text-sm text-gray-500">
+                        <p className="text-sm text-muted-foreground">
                             Current word count: {content.split(/\s+/).filter(word => word.length > 0).length} words
                         </p>
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+                    <div className="flex items-center justify-between pt-6 border-t">
                         <div className="flex space-x-3">
-                            <button
+                            <Button
                                 type="button"
+                                variant="outline"
                                 onClick={handleCancel}
-                                className="px-6 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                                 disabled={isSaving}
                             >
                                 Cancel
-                            </button>
-                            <Link
-                                href="/dashboard"
-                                className="px-6 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                            >
-                                Back to Dashboard
-                            </Link>
+                            </Button>
+                            <Button variant="outline" asChild>
+                                <Link href="/dashboard">
+                                    Back to Dashboard
+                                </Link>
+                            </Button>
                         </div>
 
-                        <button
+                        <Button
                             type="submit"
                             disabled={isSaving || !title.trim() || !content.trim()}
-                            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isSaving ? (
-                                <div className="flex items-center">
-                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Saving...
-                                </div>
+                                </>
                             ) : (
                                 'Save Changes'
                             )}
-                        </button>
+                        </Button>
                     </div>
                 </form>
-            </div>
-        </div>
+            </CardContent>
+        </Card>
     )
 }

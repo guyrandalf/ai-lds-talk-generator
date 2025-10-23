@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { FormLoadingOverlay } from '@/components/ui/LoadingOverlay'
-import { ButtonLoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { EnhancedButton } from '@/components/ui/EnhancedFormComponents'
+import CustomThemeInput from '@/components/CustomThemeInput'
+import AudienceContextSelector from '@/components/AudienceContextSelector'
 
 export interface TalkQuestionnaireData {
     topic: string
@@ -14,6 +16,8 @@ export interface TalkQuestionnaireData {
     audienceType?: string
     speakerAge?: string
     preferredThemes: string[]
+    customThemes: string[]
+    audienceContext?: string
     specificScriptures?: string[]
 }
 
@@ -21,9 +25,17 @@ interface TalkQuestionnaireProps {
     onSubmit: (data: TalkQuestionnaireData) => void
     isLoading?: boolean
     initialTopic?: string
+    progress?: number
+    stage?: 'processing' | 'generating' | 'validating' | 'complete'
 }
 
-export default function TalkQuestionnaire({ onSubmit, isLoading = false, initialTopic = '' }: TalkQuestionnaireProps) {
+export default function TalkQuestionnaire({
+    onSubmit,
+    isLoading = false,
+    initialTopic = '',
+    progress = 0,
+    stage = 'processing'
+}: TalkQuestionnaireProps) {
     const [formData, setFormData] = useState<TalkQuestionnaireData>({
         topic: initialTopic,
         duration: 15,
@@ -33,11 +45,27 @@ export default function TalkQuestionnaire({ onSubmit, isLoading = false, initial
         audienceType: '',
         speakerAge: '',
         preferredThemes: [],
+        customThemes: [],
+        audienceContext: '',
         specificScriptures: ['']
     })
 
     const [errors, setErrors] = useState<Record<string, string>>({})
 
+    const getLoadingText = () => {
+        switch (stage) {
+            case 'processing':
+                return 'Processing questionnaire...'
+            case 'generating':
+                return 'Generating your talk...'
+            case 'validating':
+                return 'Validating content...'
+            case 'complete':
+                return 'Complete!'
+            default:
+                return 'Generating your talk...'
+        }
+    }
 
     const meetingTypes = [
         { value: 'sacrament', label: 'Sacrament Meeting' },
@@ -116,12 +144,7 @@ export default function TalkQuestionnaire({ onSubmit, isLoading = false, initial
         handleInputChange(field, newArray)
     }
 
-    const handleThemeToggle = (theme: string) => {
-        const newThemes = formData.preferredThemes.includes(theme)
-            ? formData.preferredThemes.filter(t => t !== theme)
-            : [...formData.preferredThemes, theme]
-        handleInputChange('preferredThemes', newThemes)
-    }
+
 
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {}
@@ -163,7 +186,10 @@ export default function TalkQuestionnaire({ onSubmit, isLoading = false, initial
         const cleanedData = {
             ...formData,
             gospelLibraryLinks: formData.gospelLibraryLinks.filter(link => link.trim()),
-            specificScriptures: formData.specificScriptures?.filter(scripture => scripture.trim()) || []
+            specificScriptures: formData.specificScriptures?.filter(scripture => scripture.trim()) || [],
+            // Ensure custom themes are included in the data
+            customThemes: formData.customThemes || [],
+            audienceContext: formData.audienceContext || ''
         }
 
         toast.success('Processing questionnaire - preparing to generate your talk...')
@@ -378,35 +404,60 @@ export default function TalkQuestionnaire({ onSubmit, isLoading = false, initial
                             </div>
                         </div>
 
-                        {/* Preferred Themes */}
+                        {/* Custom Theme System */}
                         <div className="bg-blue-50 rounded-xl p-6">
                             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                                 <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                                 </svg>
-                                Preferred Themes
+                                Talk Themes
                             </h2>
 
                             <p className="text-sm text-gray-600 mb-4">
-                                Select themes you&apos;d like to emphasize in your talk (optional):
+                                Choose from common themes or add your own custom themes to emphasize in your talk:
                             </p>
 
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                                {commonThemes.map(theme => (
-                                    <button
-                                        key={theme}
-                                        type="button"
-                                        onClick={() => handleThemeToggle(theme)}
-                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${formData.preferredThemes.includes(theme)
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                                            }`}
-                                        disabled={isLoading}
-                                    >
-                                        {theme}
-                                    </button>
-                                ))}
-                            </div>
+                            <CustomThemeInput
+                                predefinedThemes={commonThemes}
+                                selectedThemes={[...formData.preferredThemes, ...formData.customThemes.filter(theme => formData.preferredThemes.includes(theme))]}
+                                customThemes={formData.customThemes}
+                                onThemeChange={(themes) => {
+                                    // Separate predefined and custom themes
+                                    const predefinedSelected = themes.filter(theme => commonThemes.includes(theme))
+                                    const customSelected = themes.filter(theme => formData.customThemes.includes(theme))
+
+                                    handleInputChange('preferredThemes', [...predefinedSelected, ...customSelected])
+                                }}
+                                onCustomThemeAdd={(theme) => {
+                                    const newCustomThemes = [...formData.customThemes, theme]
+                                    handleInputChange('customThemes', newCustomThemes)
+                                }}
+                                onCustomThemeRemove={(theme) => {
+                                    const newCustomThemes = formData.customThemes.filter(t => t !== theme)
+                                    handleInputChange('customThemes', newCustomThemes)
+                                }}
+                                disabled={isLoading}
+                            />
+                        </div>
+
+                        {/* Audience Context */}
+                        <div className="bg-green-50 rounded-xl p-6">
+                            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                                <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                                Audience Context
+                            </h2>
+
+                            <p className="text-sm text-gray-600 mb-4">
+                                Help us tailor your talk content to your specific audience and cultural context:
+                            </p>
+
+                            <AudienceContextSelector
+                                selectedContext={formData.audienceContext}
+                                onContextChange={(contextId) => handleInputChange('audienceContext', contextId)}
+                                disabled={isLoading}
+                            />
                         </div>
 
                         {/* Specific Scriptures */}
@@ -464,22 +515,20 @@ export default function TalkQuestionnaire({ onSubmit, isLoading = false, initial
 
                         {/* Submit Button */}
                         <div className="flex justify-center pt-6">
-                            <button
+                            <EnhancedButton
                                 type="submit"
-                                disabled={isLoading}
-                                className="px-8 py-4 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
+                                loading={isLoading}
+                                loadingText={getLoadingText()}
+                                progress={progress}
+                                showProgress={isLoading && progress > 0}
+                                size="lg"
+                                className="w-full sm:w-auto px-8 py-4 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg hover:shadow-xl min-h-[48px]"
                             >
-                                {isLoading ? (
-                                    <ButtonLoadingSpinner text="Generating Your Talk..." />
-                                ) : (
-                                    <>
-                                        Generate My Talk
-                                        <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                        </svg>
-                                    </>
-                                )}
-                            </button>
+                                Generate My Talk
+                                <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                            </EnhancedButton>
                         </div>
                     </form>
                 </div>

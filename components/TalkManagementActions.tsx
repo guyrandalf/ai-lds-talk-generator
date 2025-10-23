@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { GeneratedTalk, deleteSavedTalk } from '@/lib/actions/talks'
+import { ShareTalkDialog } from './ShareTalkDialog'
 
 interface TalkManagementActionsProps {
     talk: GeneratedTalk
@@ -215,6 +216,19 @@ export default function TalkManagementActions({ talk, onClose }: TalkManagementA
                                 </svg>
                             )}
                         </button>
+
+                        <ShareTalkDialog
+                            talk={{
+                                id: talk.id || '',
+                                title: talk.title,
+                                content: talk.content
+                            }}
+                            variant="inline"
+                            onShareComplete={() => {
+                                onClose()
+                                router.refresh()
+                            }}
+                        />
 
                         <button
                             onClick={() => setShowDeleteConfirm(true)}

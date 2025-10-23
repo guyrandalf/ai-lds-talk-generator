@@ -13,6 +13,6 @@ export default async function LoginPage() {
 }
 
 export const metadata = {
-    title: 'Sign In - LDS Talk Generator',
+    title: 'Sign In - Pulpit Pal',
     description: 'Sign in to access your saved talks and account settings',
 }

@@ -3,10 +3,30 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
-import TalkQuestionnaire, { TalkQuestionnaireData } from '@/components/TalkQuestionnaire'
+import { TalkQuestionnaireData } from '@/components/TalkQuestionnaire'
 import TalkDisplayWrapper from '@/components/TalkDisplayWrapper'
 import { TalkGenerationBreadcrumb } from '@/components/Breadcrumb'
 import UnsavedChangesDialog from '@/components/UnsavedChangesDialog'
+import { TalkGenerationProgress } from '@/components/ui/ProgressBar'
+import { withLazyLoading } from '@/components/ui/LazyLoader'
+import { Skeleton } from '@/components/ui/skeleton'
+
+const TalkQuestionnaire = withLazyLoading(
+    () => import('@/components/TalkQuestionnaire'),
+    {
+        fallback: (
+            <div className="space-y-8">
+                <Skeleton className="h-8 w-48" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                </div>
+                <Skeleton className="h-32 w-full" />
+                <Skeleton className="h-12 w-full" />
+            </div>
+        )
+    }
+)
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { generateTalk, GeneratedTalk } from '@/lib/actions/talks'
 import { getCurrentUser } from '@/lib/actions/auth'
@@ -16,6 +36,8 @@ function GeneratePageContent() {
     const [generatedTalk, setGeneratedTalk] = useState<GeneratedTalk | null>(null)
     const [isAuthenticated, setIsAuthenticated] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [generationProgress, setGenerationProgress] = useState(0)
+    const [generationStage, setGenerationStage] = useState<'processing' | 'generating' | 'validating' | 'complete'>('processing')
     const router = useRouter()
     const searchParams = useSearchParams()
     const initialTopic = searchParams.get('topic') || ''
@@ -42,21 +64,46 @@ function GeneratePageContent() {
     const handleQuestionnaireSubmit = async (data: TalkQuestionnaireData) => {
         setCurrentStep('generating')
         setError(null)
+        setGenerationProgress(0)
+        setGenerationStage('processing')
 
         // Show loading toast
         const loadingToast = toast.loading('Generating your talk...', {
             description: 'Our AI is crafting a personalized talk based on your preferences. This may take a moment.'
         })
 
+        // Simulate progress updates
+        const progressInterval = setInterval(() => {
+            setGenerationProgress(prev => {
+                if (prev < 90) {
+                    return prev + Math.random() * 15
+                }
+                return prev
+            })
+        }, 500)
+
+        // Update stages
+        setTimeout(() => setGenerationStage('generating'), 1000)
+        setTimeout(() => setGenerationStage('validating'), 3000)
+
         try {
             const result = await generateTalk(data)
+
+            // Clear progress interval
+            clearInterval(progressInterval)
+            setGenerationProgress(100)
+            setGenerationStage('complete')
 
             // Dismiss loading toast
             toast.dismiss(loadingToast)
 
             if (result.success && result.talk) {
                 setGeneratedTalk(result.talk)
-                setCurrentStep('display')
+
+                // Small delay to show completion
+                setTimeout(() => {
+                    setCurrentStep('display')
+                }, 500)
 
                 // Show success toast
                 toast.success('Talk generated successfully!', {
@@ -67,6 +114,7 @@ function GeneratePageContent() {
                 const errorMessage = result.error || 'Failed to generate talk'
                 setError(errorMessage)
                 setCurrentStep('questionnaire')
+                setGenerationStage('processing')
 
                 // Show error toast
                 toast.error('Failed to generate talk', {
@@ -74,12 +122,16 @@ function GeneratePageContent() {
                 })
             }
         } catch (err) {
+            // Clear progress interval
+            clearInterval(progressInterval)
+
             // Dismiss loading toast
             toast.dismiss(loadingToast)
 
             const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
             setError(errorMessage)
             setCurrentStep('questionnaire')
+            setGenerationStage('processing')
 
             // Show error toast
             toast.error('Failed to generate talk', {
@@ -146,22 +198,18 @@ function GeneratePageContent() {
                         onSubmit={handleQuestionnaireSubmit}
                         isLoading={false}
                         initialTopic={initialTopic}
+                        progress={generationProgress}
+                        stage={generationStage}
                     />
                 )}
 
                 {currentStep === 'generating' && (
-                    <div className="text-center py-16">
-                        <div className="max-w-md mx-auto">
-                            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                            </div>
-                            <h2 className="text-2xl font-bold text-gray-900 mb-2">Generating Your Talk</h2>
-                            <p className="text-gray-600">
-                                Our AI is crafting a personalized talk based on your preferences. This may take a moment...
-                            </p>
+                    <div className="flex items-center justify-center py-16">
+                        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 max-w-md w-full mx-4">
+                            <TalkGenerationProgress
+                                stage={generationStage}
+                                progress={generationProgress}
+                            />
                         </div>
                     </div>
                 )}

@@ -103,7 +103,7 @@ export default async function Home() {
         <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Why Choose LDS Talk Generator?
+              Why Choose Pulpit Pal?
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Built specifically for members of The Church of Jesus Christ of Latter-day Saints
@@ -154,7 +154,7 @@ export default async function Home() {
             Ready to Create Your Next Talk?
           </h2>
           <p className="text-xl text-blue-100 mb-8">
-            Join thousands of Church members who trust LDS Talk Generator for their speaking assignments.
+            Join thousands of Church members who trust Pulpit Pal for their speaking assignments.
           </p>
           <Link
             href={user ? "/dashboard" : "/auth/register"}

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { BookOpen, Menu, User, Settings, LayoutDashboard, Plus } from 'lucide-react'
+import { BookOpen, Menu, User, Settings, LayoutDashboard, Plus, Share2 } from 'lucide-react'
 import LogoutButton from './auth/LogoutButton'
 
 interface User {
@@ -44,7 +44,7 @@ export default function MobileNavigationDrawer({ user, isOpen, onOpenChange }: M
                             <BookOpen className="w-5 h-5 text-white" />
                         </div>
                         <span className="text-xl font-bold text-gray-900">
-                            LDS Talk Generator
+                            Pulpit Pal
                         </span>
                     </SheetTitle>
                 </SheetHeader>
@@ -87,6 +87,15 @@ export default function MobileNavigationDrawer({ user, isOpen, onOpenChange }: M
                                 >
                                     <LayoutDashboard className="h-5 w-5" />
                                     <span>Dashboard</span>
+                                </Link>
+
+                                <Link
+                                    href="/shared-talks"
+                                    onClick={handleLinkClick}
+                                    className="flex items-center space-x-3 p-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                                >
+                                    <Share2 className="h-5 w-5" />
+                                    <span>Shared Talks</span>
                                 </Link>
 
                                 <Link

@@ -284,6 +284,7 @@ export async function validateTalkContent(content: {
   gospelLibraryLinks: string[]
   specificScriptures: string[]
   preferredThemes: string[]
+  customThemes?: string[]
 }): Promise<{
   success: boolean
   errors: string[]
@@ -293,6 +294,7 @@ export async function validateTalkContent(content: {
     gospelLibraryLinks: string[]
     specificScriptures: string[]
     preferredThemes: string[]
+    customThemes?: string[]
   }
 }> {
   const errors: string[] = []
@@ -302,11 +304,13 @@ export async function validateTalkContent(content: {
     gospelLibraryLinks: string[]
     specificScriptures: string[]
     preferredThemes: string[]
+    customThemes?: string[]
   } = {
     topic: '',
     gospelLibraryLinks: [],
     specificScriptures: [],
-    preferredThemes: []
+    preferredThemes: [],
+    customThemes: []
   }
 
   try {
@@ -357,6 +361,40 @@ export async function validateTalkContent(content: {
       }
     }
     validatedContent.preferredThemes = validThemes
+
+    // Validate custom themes with additional checks
+    const validCustomThemes = []
+    if (content.customThemes) {
+      for (const theme of content.customThemes) {
+        const themeResult = await sanitizeInput(theme)
+        if (themeResult.success && themeResult.validatedContent) {
+          const cleanTheme = themeResult.validatedContent.trim()
+
+          // Additional validation for custom themes
+          if (cleanTheme.length >= 2 && cleanTheme.length <= 50) {
+            // Check for inappropriate content patterns
+            const inappropriatePatterns = [
+              /\b(politics|political|democrat|republican)\b/i,
+              /\b(controversial|debate|argument)\b/i,
+              /\b(hate|violence|inappropriate)\b/i
+            ]
+
+            const hasInappropriateContent = inappropriatePatterns.some(pattern =>
+              pattern.test(cleanTheme)
+            )
+
+            if (!hasInappropriateContent) {
+              validCustomThemes.push(cleanTheme)
+            } else {
+              errors.push(`Custom theme "${cleanTheme}" contains inappropriate content`)
+            }
+          } else {
+            errors.push(`Custom theme "${cleanTheme}" must be between 2 and 50 characters`)
+          }
+        }
+      }
+    }
+    validatedContent.customThemes = validCustomThemes
 
     return {
       success: errors.length === 0,

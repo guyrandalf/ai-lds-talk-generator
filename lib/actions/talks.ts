@@ -25,6 +25,8 @@ export interface TalkQuestionnaireData {
   audienceType?: string
   speakerAge?: string
   preferredThemes: string[]
+  customThemes: string[]
+  audienceContext?: string
   specificScriptures?: string[]
 }
 
@@ -74,6 +76,8 @@ const questionnaireSchema = z.object({
   audienceType: z.string().optional(),
   speakerAge: z.string().optional(),
   preferredThemes: z.array(z.string()).default([]),
+  customThemes: z.array(z.string()).default([]),
+  audienceContext: z.string().optional(),
   specificScriptures: z.array(z.string()).default([])
 })
 
@@ -111,6 +115,8 @@ export async function processQuestionnaire(formData: FormData): Promise<Processe
       speakerAge: formData.get('speakerAge') as string || undefined,
       gospelLibraryLinks: formData.getAll('gospelLibraryLinks') as string[],
       preferredThemes: formData.getAll('preferredThemes') as string[],
+      customThemes: formData.getAll('customThemes') as string[],
+      audienceContext: formData.get('audienceContext') as string || undefined,
       specificScriptures: formData.getAll('specificScriptures') as string[]
     }
 
@@ -123,7 +129,8 @@ export async function processQuestionnaire(formData: FormData): Promise<Processe
       personalStory: validatedData.personalStory,
       gospelLibraryLinks: validatedData.gospelLibraryLinks,
       specificScriptures: validatedData.specificScriptures,
-      preferredThemes: validatedData.preferredThemes
+      preferredThemes: validatedData.preferredThemes,
+      customThemes: validatedData.customThemes
     })
 
     if (!contentValidation.success) {
@@ -145,6 +152,8 @@ export async function processQuestionnaire(formData: FormData): Promise<Processe
       gospelLibraryLinks: contentValidation.validatedContent!.gospelLibraryLinks,
       audienceType: validatedData.audienceType,
       preferredThemes: contentValidation.validatedContent!.preferredThemes,
+      customThemes: validatedData.customThemes,
+      audienceContext: validatedData.audienceContext,
       specificScriptures: contentValidation.validatedContent!.specificScriptures
     }
 
@@ -189,7 +198,8 @@ export async function processQuestionnaireData(data: TalkQuestionnaireData): Pro
       personalStory: validatedData.personalStory,
       gospelLibraryLinks: validatedData.gospelLibraryLinks,
       specificScriptures: validatedData.specificScriptures,
-      preferredThemes: validatedData.preferredThemes
+      preferredThemes: validatedData.preferredThemes,
+      customThemes: validatedData.customThemes
     })
 
     if (!contentValidation.success) {
@@ -211,6 +221,8 @@ export async function processQuestionnaireData(data: TalkQuestionnaireData): Pro
       gospelLibraryLinks: contentValidation.validatedContent!.gospelLibraryLinks,
       audienceType: validatedData.audienceType,
       preferredThemes: contentValidation.validatedContent!.preferredThemes,
+      customThemes: validatedData.customThemes,
+      audienceContext: validatedData.audienceContext,
       specificScriptures: contentValidation.validatedContent!.specificScriptures
     }
 
@@ -669,12 +681,62 @@ ${questionnaire.specificScriptures.map(scripture => `- ${scripture}`).join('\n')
 Include these scriptures with context and application to the topic.`)
     }
 
-    // Preferred themes
-    if (questionnaire.preferredThemes.length > 0) {
-      promptSections.push(`THEMES TO EMPHASIZE:
-${questionnaire.preferredThemes.map(theme => `- ${theme}`).join('\n')}
+    // Preferred themes (including custom themes)
+    const allThemes = [...questionnaire.preferredThemes]
+    if (questionnaire.customThemes && questionnaire.customThemes.length > 0) {
+      allThemes.push(...questionnaire.customThemes)
+    }
 
-Weave these themes throughout the talk to create a cohesive message.`)
+    if (allThemes.length > 0) {
+      promptSections.push(`THEMES TO EMPHASIZE:
+${allThemes.map(theme => `- ${theme}`).join('\n')}
+
+Weave these themes throughout the talk to create a cohesive message. Pay special attention to any custom themes as they represent the speaker's specific interests and insights.`)
+    }
+
+    // Audience context guidance
+    if (questionnaire.audienceContext) {
+      let contextGuidance = ''
+
+      switch (questionnaire.audienceContext) {
+        case 'local':
+          contextGuidance = `AUDIENCE CONTEXT - LOCAL CONGREGATION:
+You are speaking to a local ward or branch where the speaker is known personally. Please:
+- Use a more personal and intimate tone
+- Reference local experiences and shared community memories when appropriate
+- Include examples that resonate with the local congregation's experiences
+- Use familiar, warm language as if speaking to close friends and family
+- Consider local cultural context and shared experiences
+- Feel free to reference ward activities, local leaders, or community experiences (in general terms)`
+          break
+
+        case 'regional':
+          contextGuidance = `AUDIENCE CONTEXT - REGIONAL/STAKE CONFERENCE:
+You are speaking to multiple wards in a stake or region with diverse backgrounds. Please:
+- Use a more formal but still personal approach
+- Focus on universal gospel themes that apply broadly across different communities
+- Avoid ward-specific references or overly local examples
+- Use examples that multiple communities within the region can relate to
+- Be mindful of different socioeconomic and cultural situations within the region
+- Strike a balance between personal testimony and broader gospel principles`
+          break
+
+        case 'global':
+          contextGuidance = `AUDIENCE CONTEXT - GLOBAL/GENERAL AUDIENCE:
+You are speaking to a diverse, worldwide audience with varied cultural backgrounds. Please:
+- Use universal language and examples that transcend cultural boundaries
+- Avoid region-specific cultural references, colloquialisms, or local expressions
+- Focus on fundamental gospel truths and core doctrinal principles
+- Use scriptures and official Church leader quotes as primary references
+- Be sensitive to different economic, social, and cultural situations worldwide
+- Emphasize universal human experiences and emotions that all can relate to
+- Keep examples broad and applicable across different cultures and circumstances`
+          break
+      }
+
+      if (contextGuidance) {
+        promptSections.push(contextGuidance)
+      }
     }
 
     // Talk structure requirements
@@ -739,9 +801,13 @@ export async function generateTalk(questionnaire: TalkQuestionnaireData): Promis
   talk?: GeneratedTalk
   error?: string
   warnings?: string[]
+  violations?: any[]
 }> {
   try {
     console.log('Starting talk generation for topic:', questionnaire.topic)
+
+    // Get user session for security context
+    const session = await getSession()
 
     // Validate questionnaire
     const validation = await validateQuestionnaireForGeneration(questionnaire)
@@ -761,6 +827,32 @@ export async function generateTalk(questionnaire: TalkQuestionnaireData): Promis
       }
     }
 
+    // Validate questionnaire input with AI content filter
+    const { validateQuestionnaireInput } = await import('../security/aiContentFilter')
+    const { convertViolationsToFeedback } = await import('../utils/contentFeedback')
+
+    const filterResult = await validateQuestionnaireInput(questionnaire, {
+      userId: session?.user?.id,
+      sessionId: session?.sessionId
+    })
+
+    if (!filterResult.success) {
+      const violations = convertViolationsToFeedback(filterResult.securityViolations)
+      return {
+        success: false,
+        error: filterResult.errors[0] || 'Content validation failed',
+        warnings: filterResult.warnings,
+        violations
+      }
+    }
+
+    if (filterResult.rateLimited) {
+      return {
+        success: false,
+        error: 'Too many requests. Please wait before trying again.'
+      }
+    }
+
     // Format questionnaire for AI prompt
     const promptResult = await formatQuestionnaireForAI(questionnaire)
     if (!promptResult.success) {
@@ -773,7 +865,7 @@ export async function generateTalk(questionnaire: TalkQuestionnaireData): Promis
     // Create system message for talk generation
     const systemMessage: XAIMessage = {
       role: 'system',
-      content: `You are an expert at writing LDS sacrament meeting and stake conference talks. You help members of The Church of Jesus Christ of Latter-day Saints create meaningful, doctrinally sound talks.
+      content: `You are an expert at writing LDS sacrament meeting and stake conference talks. You help members of The Church of Jesus Christ of Latter-day Saints create meaningful, doctrinally sound talks using Pulpit Pal.
 
 CRITICAL REQUIREMENTS:
 1. Write in first person as if the speaker is delivering personally
@@ -823,6 +915,24 @@ Provide the talk content in a clear, readable format with proper paragraphs and 
 
     // Extract Church sources from the content
     const extractedSources = extractChurchSources(processedContent.content)
+
+    // Validate AI response with security filter
+    const { validateAIResponse } = await import('../security/aiContentFilter')
+    const aiValidation = await validateAIResponse(generatedContent, {
+      userId: session?.user?.id,
+      sessionId: session?.sessionId
+    })
+
+    if (!aiValidation.success) {
+      const violations = convertViolationsToFeedback(aiValidation.securityViolations)
+      console.error('AI response validation failed:', aiValidation.errors)
+      return {
+        success: false,
+        error: `Generated content failed security validation: ${aiValidation.errors.join('; ')}`,
+        warnings: aiValidation.warnings,
+        violations
+      }
+    }
 
     // Validate generated content with comprehensive safety checks
     const { validateCompleteGeneratedTalk } = await import('./validation')
@@ -1593,6 +1703,8 @@ export async function saveTalkToDatabase(talk: GeneratedTalk): Promise<{
           topic: talk.questionnaire?.topic || null,
           personalStory: talk.questionnaire?.personalStory || null,
           gospelLibraryLinks: talk.questionnaire?.gospelLibraryLinks || [],
+          audienceContext: talk.questionnaire?.audienceContext || null,
+          customThemes: talk.questionnaire?.customThemes || [],
           preferences: talk.questionnaire ? {
             audienceType: talk.questionnaire.audienceType || null,
             preferredThemes: talk.questionnaire.preferredThemes || [],
@@ -1685,6 +1797,8 @@ export async function getUserSavedTalks(): Promise<{
           gospelLibraryLinks: talk.gospelLibraryLinks,
           audienceType: (talk.preferences as TalkPreferences)?.audienceType,
           preferredThemes: (talk.preferences as TalkPreferences)?.preferredThemes || [],
+          customThemes: (talk as any).customThemes || [],
+          audienceContext: (talk as any).audienceContext || undefined,
           specificScriptures: (talk.preferences as TalkPreferences)?.specificScriptures || []
         },
         createdAt: talk.createdAt
@@ -1820,6 +1934,12 @@ export async function updateSavedTalk(talkId: string, updates: Partial<Generated
       if (updates.questionnaire?.gospelLibraryLinks) {
         updateData.gospelLibraryLinks = updates.questionnaire.gospelLibraryLinks
       }
+      if (updates.questionnaire?.customThemes) {
+        updateData.customThemes = updates.questionnaire.customThemes
+      }
+      if (updates.questionnaire?.audienceContext !== undefined) {
+        updateData.audienceContext = updates.questionnaire.audienceContext
+      }
       if (updates.questionnaire) {
         updateData.preferences = {
           audienceType: updates.questionnaire.audienceType,
@@ -1927,6 +2047,8 @@ export async function getSavedTalkById(talkId: string): Promise<{
           gospelLibraryLinks: savedTalk.gospelLibraryLinks,
           audienceType: (savedTalk.preferences as TalkPreferences)?.audienceType,
           preferredThemes: (savedTalk.preferences as TalkPreferences)?.preferredThemes || [],
+          customThemes: (savedTalk as unknown).customThemes || [],
+          audienceContext: (savedTalk as unknown).audienceContext || undefined,
           specificScriptures: (savedTalk.preferences as TalkPreferences)?.specificScriptures || []
         },
         createdAt: savedTalk.createdAt
@@ -1944,6 +2066,538 @@ export async function getSavedTalkById(talkId: string): Promise<{
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to retrieve saved talk'
+    }
+  }
+}/**
+ 
+* Shares a talk with other users
+ */
+export async function shareTalk(
+  talkId: string,
+  recipientIds: string[],
+  message?: string
+): Promise<{
+  success: boolean
+  sharesCreated?: number
+  error?: string
+}> {
+  try {
+    // Get current user session
+    const session = await getSession()
+
+    if (!session?.userId) {
+      return {
+        success: false,
+        error: 'User must be authenticated to share talks'
+      }
+    }
+
+    // Validate input
+    if (!talkId || !recipientIds || recipientIds.length === 0) {
+      return {
+        success: false,
+        error: 'Talk ID and recipient IDs are required'
+      }
+    }
+
+    // Import Prisma client
+    const { PrismaClient } = await import('@prisma/client')
+    const prisma = new PrismaClient()
+
+    try {
+      // Verify the talk exists and belongs to the current user
+      const talk = await prisma.talk.findFirst({
+        where: {
+          id: talkId,
+          userId: session.userId
+        }
+      })
+
+      if (!talk) {
+        return {
+          success: false,
+          error: 'Talk not found or you do not have permission to share it'
+        }
+      }
+
+      // Verify all recipient users exist
+      const recipients = await prisma.user.findMany({
+        where: {
+          id: {
+            in: recipientIds
+          }
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true
+        }
+      })
+
+      if (recipients.length !== recipientIds.length) {
+        return {
+          success: false,
+          error: 'One or more recipient users not found'
+        }
+      }
+
+      // Create share records for each recipient
+      const sharePromises = recipientIds.map(recipientId =>
+        prisma.talkShare.upsert({
+          where: {
+            talkId_sharedById_sharedWithId: {
+              talkId,
+              sharedById: session.userId,
+              sharedWithId: recipientId
+            }
+          },
+          update: {
+            status: 'pending',
+            message: message || null,
+            createdAt: new Date() // Update timestamp for re-shares
+          },
+          create: {
+            talkId,
+            sharedById: session.userId,
+            sharedWithId: recipientId,
+            message: message || null,
+            status: 'pending'
+          }
+        })
+      )
+
+      const shares = await Promise.all(sharePromises)
+
+      console.log('Talk shared successfully', {
+        talkId,
+        sharedById: session.userId,
+        recipientCount: shares.length
+      })
+
+      return {
+        success: true,
+        sharesCreated: shares.length
+      }
+    } finally {
+      await prisma.$disconnect()
+    }
+  } catch (error) {
+    console.error('Share talk error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to share talk'
+    }
+  }
+}
+
+/**
+ * Gets shared talks received by the current user
+ */
+export async function getReceivedSharedTalks(): Promise<{
+  success: boolean
+  shares?: Array<{
+    id: string
+    talk: GeneratedTalk
+    sharedBy: {
+      id: string
+      firstName: string
+      lastName: string
+      email: string
+    }
+    message?: string
+    status: string
+    createdAt: Date
+  }>
+  error?: string
+}> {
+  try {
+    // Get current user session
+    const session = await getSession()
+
+    if (!session?.userId) {
+      return {
+        success: false,
+        error: 'User must be authenticated to view shared talks'
+      }
+    }
+
+    // Import Prisma client
+    const { PrismaClient } = await import('@prisma/client')
+    const prisma = new PrismaClient()
+
+    try {
+      // Fetch received shares
+      const receivedShares = await prisma.talkShare.findMany({
+        where: {
+          sharedWithId: session.userId
+        },
+        include: {
+          talk: true,
+          sharedBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      })
+
+      // Convert to expected format
+      const shares = receivedShares.map(share => ({
+        id: share.id,
+        talk: {
+          id: share.talk.id,
+          title: share.talk.title,
+          content: share.talk.content,
+          duration: share.talk.duration,
+          meetingType: share.talk.meetingType,
+          sources: [], // Sources would need to be extracted from content
+          questionnaire: {
+            topic: share.talk.topic || '',
+            duration: share.talk.duration,
+            meetingType: share.talk.meetingType as 'sacrament' | 'stake_conference',
+            personalStory: share.talk.personalStory || undefined,
+            gospelLibraryLinks: share.talk.gospelLibraryLinks,
+            audienceType: (share.talk.preferences as TalkPreferences)?.audienceType,
+            preferredThemes: (share.talk.preferences as TalkPreferences)?.preferredThemes || [],
+            customThemes: (share.talk as any).customThemes || [],
+            audienceContext: (share.talk as any).audienceContext || undefined,
+            specificScriptures: (share.talk.preferences as TalkPreferences)?.specificScriptures || []
+          },
+          createdAt: share.talk.createdAt
+        } as GeneratedTalk,
+        sharedBy: share.sharedBy,
+        message: share.message || undefined,
+        status: share.status,
+        createdAt: share.createdAt
+      }))
+
+      return {
+        success: true,
+        shares
+      }
+    } finally {
+      await prisma.$disconnect()
+    }
+  } catch (error) {
+    console.error('Get received shared talks error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to retrieve shared talks'
+    }
+  }
+}
+
+/**
+ * Gets talks shared by the current user
+ */
+export async function getSharedTalksByUser(): Promise<{
+  success: boolean
+  shares?: Array<{
+    id: string
+    talk: GeneratedTalk
+    sharedWith: {
+      id: string
+      firstName: string
+      lastName: string
+      email: string
+    }
+    message?: string
+    status: string
+    createdAt: Date
+    respondedAt?: Date
+  }>
+  error?: string
+}> {
+  try {
+    // Get current user session
+    const session = await getSession()
+
+    if (!session?.userId) {
+      return {
+        success: false,
+        error: 'User must be authenticated to view shared talks'
+      }
+    }
+
+    // Import Prisma client
+    const { PrismaClient } = await import('@prisma/client')
+    const prisma = new PrismaClient()
+
+    try {
+      // Fetch shares created by current user
+      const userShares = await prisma.talkShare.findMany({
+        where: {
+          sharedById: session.userId
+        },
+        include: {
+          talk: true,
+          sharedWith: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      })
+
+      // Convert to expected format
+      const shares = userShares.map(share => ({
+        id: share.id,
+        talk: {
+          id: share.talk.id,
+          title: share.talk.title,
+          content: share.talk.content,
+          duration: share.talk.duration,
+          meetingType: share.talk.meetingType,
+          sources: [], // Sources would need to be extracted from content
+          questionnaire: {
+            topic: share.talk.topic || '',
+            duration: share.talk.duration,
+            meetingType: share.talk.meetingType as 'sacrament' | 'stake_conference',
+            personalStory: share.talk.personalStory || undefined,
+            gospelLibraryLinks: share.talk.gospelLibraryLinks,
+            audienceType: (share.talk.preferences as TalkPreferences)?.audienceType,
+            preferredThemes: (share.talk.preferences as TalkPreferences)?.preferredThemes || [],
+            customThemes: (share.talk as any).customThemes || [],
+            audienceContext: (share.talk as any).audienceContext || undefined,
+            specificScriptures: (share.talk.preferences as TalkPreferences)?.specificScriptures || []
+          },
+          createdAt: share.talk.createdAt
+        } as GeneratedTalk,
+        sharedWith: share.sharedWith,
+        message: share.message || undefined,
+        status: share.status,
+        createdAt: share.createdAt,
+        respondedAt: share.respondedAt || undefined
+      }))
+
+      return {
+        success: true,
+        shares
+      }
+    } finally {
+      await prisma.$disconnect()
+    }
+  } catch (error) {
+    console.error('Get user shared talks error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to retrieve shared talks'
+    }
+  }
+}
+
+/**
+ * Responds to a shared talk (accept or decline)
+ */
+export async function respondToSharedTalk(
+  shareId: string,
+  response: 'accepted' | 'declined'
+): Promise<{
+  success: boolean
+  error?: string
+}> {
+  try {
+    // Get current user session
+    const session = await getSession()
+
+    if (!session?.userId) {
+      return {
+        success: false,
+        error: 'User must be authenticated to respond to shared talks'
+      }
+    }
+
+    // Validate input
+    if (!shareId || !['accepted', 'declined'].includes(response)) {
+      return {
+        success: false,
+        error: 'Valid share ID and response are required'
+      }
+    }
+
+    // Import Prisma client
+    const { PrismaClient } = await import('@prisma/client')
+    const prisma = new PrismaClient()
+
+    try {
+      // Update the share status
+      const updatedShare = await prisma.talkShare.updateMany({
+        where: {
+          id: shareId,
+          sharedWithId: session.userId,
+          status: 'pending' // Only allow responding to pending shares
+        },
+        data: {
+          status: response,
+          respondedAt: new Date()
+        }
+      })
+
+      if (updatedShare.count === 0) {
+        return {
+          success: false,
+          error: 'Share not found, already responded to, or you do not have permission to respond'
+        }
+      }
+
+      // If accepted, optionally copy the talk to user's library
+      if (response === 'accepted') {
+        // Get the shared talk details
+        const share = await prisma.talkShare.findUnique({
+          where: { id: shareId },
+          include: { talk: true }
+        })
+
+        if (share) {
+          // Create a copy of the talk for the user
+          await prisma.talk.create({
+            data: {
+              title: `${share.talk.title} (Shared)`,
+              content: share.talk.content,
+              duration: share.talk.duration,
+              meetingType: share.talk.meetingType,
+              topic: share.talk.topic,
+              personalStory: share.talk.personalStory,
+              gospelLibraryLinks: share.talk.gospelLibraryLinks,
+              audienceContext: (share.talk as any).audienceContext,
+              customThemes: (share.talk as any).customThemes || [],
+              preferences: share.talk.preferences,
+              userId: session.userId
+            }
+          })
+        }
+      }
+
+      console.log('Responded to shared talk', {
+        shareId,
+        response,
+        userId: session.userId
+      })
+
+      return {
+        success: true
+      }
+    } finally {
+      await prisma.$disconnect()
+    }
+  } catch (error) {
+    console.error('Respond to shared talk error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to respond to shared talk'
+    }
+  }
+}
+
+/**
+ * Searches for users by email or name (for sharing functionality)
+ */
+export async function searchUsers(
+  query: string,
+  currentUserId?: string
+): Promise<{
+  success: boolean
+  users?: Array<{
+    id: string
+    email: string
+    firstName: string
+    lastName: string
+  }>
+  error?: string
+}> {
+  try {
+    // Get current user session if not provided
+    if (!currentUserId) {
+      const session = await getSession()
+      if (!session?.userId) {
+        return {
+          success: false,
+          error: 'User must be authenticated to search for users'
+        }
+      }
+      currentUserId = session.userId
+    }
+
+    // Validate query
+    if (!query || query.length < 2) {
+      return {
+        success: true,
+        users: []
+      }
+    }
+
+    // Import Prisma client
+    const { PrismaClient } = await import('@prisma/client')
+    const prisma = new PrismaClient()
+
+    try {
+      // Search for users by email or name, excluding the current user
+      const users = await prisma.user.findMany({
+        where: {
+          AND: [
+            {
+              id: {
+                not: currentUserId
+              }
+            },
+            {
+              OR: [
+                {
+                  email: {
+                    contains: query,
+                    mode: 'insensitive'
+                  }
+                },
+                {
+                  firstName: {
+                    contains: query,
+                    mode: 'insensitive'
+                  }
+                },
+                {
+                  lastName: {
+                    contains: query,
+                    mode: 'insensitive'
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true
+        },
+        take: 10 // Limit results to prevent performance issues
+      })
+
+      return {
+        success: true,
+        users
+      }
+    } finally {
+      await prisma.$disconnect()
+    }
+  } catch (error) {
+    console.error('Search users error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to search users'
     }
   }
 }

@@ -4,12 +4,14 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { registerUser } from '@/lib/actions/auth'
+import { useAuth } from '@/hooks/useAuth'
 import { User, Mail, Lock, AlertCircle, Loader2, Info } from 'lucide-react'
 
 export default function RegisterForm() {
     const [error, setError] = useState<string>('')
     const [isLoading, setIsLoading] = useState(false)
     const router = useRouter()
+    const { refreshUser } = useAuth()
 
     async function handleSubmit(formData: FormData) {
         setIsLoading(true)
@@ -18,6 +20,8 @@ export default function RegisterForm() {
         const result = await registerUser(formData)
 
         if (result.success) {
+            // Refresh the auth state to update the navigation
+            await refreshUser()
             router.push('/dashboard')
         } else {
             setError(result.error || 'Registration failed')

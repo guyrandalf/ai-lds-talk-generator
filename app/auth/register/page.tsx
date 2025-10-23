@@ -13,6 +13,6 @@ export default async function RegisterPage() {
 }
 
 export const metadata = {
-    title: 'Register - LDS Talk Generator',
+    title: 'Register - Pulpit Pal',
     description: 'Create your account to save and manage your talks',
 }

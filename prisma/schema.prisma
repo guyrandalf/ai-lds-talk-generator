@@ -20,7 +20,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  talks     Talk[]
+  talks              Talk[]
+  securityViolations SecurityViolation[]
+  passwordResets     PasswordReset[]
+  sharedTalks        TalkShare[] @relation("SharedBy")
+  receivedShares     TalkShare[] @relation("SharedWith")
 }
 
 model Talk {
@@ -36,6 +40,10 @@ model Talk {
   gospelLibraryLinks String[] // Array of validated Church links
   preferences        Json?    // Additional customization
   
+  // Enhanced questionnaire data
+  audienceContext    String?  // New field for audience targeting
+  customThemes       String[] // User-defined themes
+  
   // Metadata
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -43,4 +51,76 @@ model Talk {
   // Relationships
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shares      TalkShare[]
+}
+
+model SecurityViolation {
+  id              String   @id @default(cuid())
+  type            String   // 'inappropriate_content' | 'manipulation_attempt' | 'spam' | 'policy_violation'
+  severity        String   // 'low' | 'medium' | 'high' | 'critical'
+  description     String
+  detectedPattern String   @db.Text
+  userInput       String?  @db.Text // The original input that triggered the violation
+  ipAddress       String?
+  userAgent       String?
+  sessionId       String?
+  
+  // Rate limiting fields
+  violationCount  Int      @default(1)
+  lastViolationAt DateTime @default(now())
+  
+  // Metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relationships
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  // Indexes for performance
+  @@index([userId, type])
+  @@index([createdAt])
+  @@index([severity])
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Indexes for performance optimization
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([used])
+}
+
+model TalkShare {
+  id           String   @id @default(cuid())
+  talkId       String
+  sharedById   String
+  sharedWithId String
+  status       String   @default("pending") // "pending" | "accepted" | "declined"
+  message      String?  @db.Text // Optional message from sharer
+  createdAt    DateTime @default(now())
+  respondedAt  DateTime?
+  
+  // Relationships
+  talk         Talk     @relation(fields: [talkId], references: [id], onDelete: Cascade)
+  sharedBy     User     @relation("SharedBy", fields: [sharedById], references: [id], onDelete: Cascade)
+  sharedWith   User     @relation("SharedWith", fields: [sharedWithId], references: [id], onDelete: Cascade)
+  
+  // Ensure unique sharing between users for the same talk
+  @@unique([talkId, sharedById, sharedWithId])
+  
+  // Indexes for performance
+  @@index([sharedWithId, status])
+  @@index([sharedById])
+  @@index([talkId])
+  @@index([createdAt])
 }

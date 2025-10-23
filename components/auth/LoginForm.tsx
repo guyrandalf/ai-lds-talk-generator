@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { loginUser } from '@/lib/actions/auth'
+import { useAuth } from '@/hooks/useAuth'
 import { Mail, Lock, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { ButtonLoadingSpinner } from '@/components/ui/LoadingSpinner'
@@ -13,6 +14,7 @@ export default function LoginForm() {
     const [error, setError] = useState<string>('')
     const [isLoading, setIsLoading] = useState(false)
     const router = useRouter()
+    const { refreshUser } = useAuth()
 
 
     async function handleSubmit(formData: FormData) {
@@ -24,6 +26,8 @@ export default function LoginForm() {
 
             if (result.success) {
                 toast.success('Welcome back! You have been successfully signed in.')
+                // Refresh the auth state to update the navigation
+                await refreshUser()
                 router.push('/dashboard')
             } else {
                 setError(result.error || 'Login failed')
@@ -96,7 +100,12 @@ export default function LoginForm() {
                     )}
                 </button>
 
-                <div className="text-center">
+                <div className="text-center space-y-2">
+                    <p className="text-gray-600 dark:text-gray-400">
+                        <Link href="/auth/forgot-password" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">
+                            Forgot your password?
+                        </Link>
+                    </p>
                     <p className="text-gray-600 dark:text-gray-400">
                         Don&apos;t have an account?{' '}
                         <Link href="/auth/register" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">

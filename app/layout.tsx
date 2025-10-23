@@ -2,8 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/hooks/useAuth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,13 +23,13 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: "LDS Talk Generator - Create Inspiring Talks",
+  title: "Pulpit Pal - Create Inspiring Talks",
   description: "Generate personalized sacrament meeting and stake conference talks using official Church content from churchofjesuschrist.org. Save, edit, and export your talks to Word documents.",
   keywords: ["LDS", "Mormon", "talk generator", "sacrament meeting", "stake conference", "Church of Jesus Christ"],
-  authors: [{ name: "LDS Talk Generator" }],
+  authors: [{ name: "Pulpit Pal" }],
   robots: "index, follow",
   openGraph: {
-    title: "LDS Talk Generator - Create Inspiring Talks",
+    title: "Pulpit Pal - Create Inspiring Talks",
     description: "Generate personalized sacrament meeting and stake conference talks using official Church content",
     type: "website",
     locale: "en_US",
@@ -42,14 +44,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 min-h-screen flex flex-col`}
       >
         <ErrorBoundary>
-          <Navigation />
-          {children}
-          <Toaster
-            position="top-center"
-          />
+          <AuthProvider>
+            <Navigation />
+            <main className="flex-1">
+              {children}
+            </main>
+            <Footer />
+            <Toaster
+              position="top-center"
+            />
+          </AuthProvider>
         </ErrorBoundary>
       </body>
     </html>
