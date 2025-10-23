@@ -2,8 +2,12 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { toast } from 'sonner'
 import TalkQuestionnaire, { TalkQuestionnaireData } from '@/components/TalkQuestionnaire'
 import TalkDisplayWrapper from '@/components/TalkDisplayWrapper'
+import { TalkGenerationBreadcrumb } from '@/components/Breadcrumb'
+import UnsavedChangesDialog from '@/components/UnsavedChangesDialog'
+import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { generateTalk, GeneratedTalk } from '@/lib/actions/talks'
 import { getCurrentUser } from '@/lib/actions/auth'
 
@@ -16,6 +20,12 @@ function GeneratePageContent() {
     const searchParams = useSearchParams()
     const initialTopic = searchParams.get('topic') || ''
 
+    // Navigation guard for unsaved talks
+    const navigationGuard = useNavigationGuard({
+        enabled: true,
+        warningMessage: 'You have a generated talk that hasn\'t been saved. Are you sure you want to leave? Your talk will be lost.'
+    })
+
     // Check authentication status on component mount
     useEffect(() => {
         getCurrentUser().then(user => {
@@ -23,29 +33,74 @@ function GeneratePageContent() {
         })
     }, [])
 
+    // Update navigation guard based on talk state
+    useEffect(() => {
+        const hasUnsavedTalk = currentStep === 'display' && generatedTalk && !generatedTalk.id
+        navigationGuard.setUnsavedChanges(!!hasUnsavedTalk)
+    }, [currentStep, generatedTalk, navigationGuard])
+
     const handleQuestionnaireSubmit = async (data: TalkQuestionnaireData) => {
         setCurrentStep('generating')
         setError(null)
 
+        // Show loading toast
+        const loadingToast = toast.loading('Generating your talk...', {
+            description: 'Our AI is crafting a personalized talk based on your preferences. This may take a moment.'
+        })
+
         try {
             const result = await generateTalk(data)
+
+            // Dismiss loading toast
+            toast.dismiss(loadingToast)
 
             if (result.success && result.talk) {
                 setGeneratedTalk(result.talk)
                 setCurrentStep('display')
+
+                // Show success toast
+                toast.success('Talk generated successfully!', {
+                    description: 'Your personalized talk is ready for review. You can save it to your account or export it to Word.',
+                    duration: 5000
+                })
             } else {
-                setError(result.error || 'Failed to generate talk')
+                const errorMessage = result.error || 'Failed to generate talk'
+                setError(errorMessage)
                 setCurrentStep('questionnaire')
+
+                // Show error toast
+                toast.error('Failed to generate talk', {
+                    description: errorMessage
+                })
             }
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+            // Dismiss loading toast
+            toast.dismiss(loadingToast)
+
+            const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
+            setError(errorMessage)
             setCurrentStep('questionnaire')
+
+            // Show error toast
+            toast.error('Failed to generate talk', {
+                description: errorMessage
+            })
         }
     }
 
     const handleSaveSuccess = (talkId: string) => {
-        // Redirect to the saved talk page
-        router.push(`/talk/${talkId}`)
+        // Clear unsaved changes flag since talk is now saved
+        navigationGuard.setUnsavedChanges(false)
+
+        // Update the generated talk with the ID
+        if (generatedTalk) {
+            setGeneratedTalk({ ...generatedTalk, id: talkId })
+        }
+
+        // Redirect to dashboard after successful save
+        setTimeout(() => {
+            router.push('/dashboard')
+        }, 1500) // Small delay to let the success toast show
     }
 
     const handleError = (errorMessage: string) => {
@@ -53,6 +108,9 @@ function GeneratePageContent() {
     }
 
     const handleStartOver = () => {
+        // Clear unsaved changes flag
+        navigationGuard.setUnsavedChanges(false)
+
         setCurrentStep('questionnaire')
         setGeneratedTalk(null)
         setError(null)
@@ -61,6 +119,8 @@ function GeneratePageContent() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12">
             <div className="max-w-6xl mx-auto px-6 sm:px-6 lg:px-8">
+                {/* Breadcrumb Navigation */}
+                <TalkGenerationBreadcrumb currentStep={currentStep} />
                 {/* Error Display */}
                 {error && (
                     <div className="mb-8 bg-red-50 border border-red-200 rounded-xl p-4">
@@ -130,6 +190,18 @@ function GeneratePageContent() {
                         />
                     </div>
                 )}
+
+                {/* Unsaved Changes Dialog */}
+                <UnsavedChangesDialog
+                    open={navigationGuard.showWarning}
+                    onOpenChange={navigationGuard.hideUnsavedWarning}
+                    title="Unsaved Talk"
+                    message={navigationGuard.warningMessage}
+                    confirmText="Leave without saving"
+                    cancelText="Stay and continue"
+                    onConfirm={navigationGuard.confirmNavigation}
+                    onCancel={navigationGuard.cancelNavigation}
+                />
             </div>
         </div>
     )

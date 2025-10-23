@@ -8,7 +8,7 @@ export default async function QuestionnairePage({ searchParams }: QuestionnaireP
     const params = await searchParams
     const topic = params.topic || ''
 
-    // Redirect to the new generate page with the topic
+    // Redirect to the generate page with the topic
     const searchParamsString = topic ? `?topic=${encodeURIComponent(topic)}` : ''
     redirect(`/generate${searchParamsString}`)
 }

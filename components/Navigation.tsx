@@ -93,7 +93,7 @@ function Navigation() {
                                     </Avatar>
                                 </div>
                                 <div className="flex items-center space-x-6">
-                                    <Button asChild className="shadow-sm hover:shadow-md">
+                                    <Button asChild className="shadow-sm hover:shadow-md bg-blue-600 hover:bg-blue-700">
                                         <Link href="/questionnaire">
                                             Create Talk
                                         </Link>
@@ -118,7 +118,7 @@ function Navigation() {
                                         Sign In
                                     </Link>
                                 </Button>
-                                <Button asChild className="shadow-sm hover:shadow-md">
+                                <Button asChild className="shadow-sm hover:shadow-md bg-blue-600 hover:bg-blue-700">
                                     <Link href="/auth/register">
                                         Create Account
                                     </Link>

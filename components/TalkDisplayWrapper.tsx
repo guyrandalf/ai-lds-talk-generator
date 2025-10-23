@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import TalkDisplay from './TalkDisplay'
 import { GeneratedTalk, saveTalkToDatabase } from '@/lib/actions/talks'
 
@@ -29,11 +30,19 @@ export default function TalkDisplayWrapper({
 
     const handleExport = async () => {
         if (!talk.id) {
-            onError?.('Talk must be saved before exporting')
+            const errorMessage = 'Talk must be saved before exporting'
+            toast.error(errorMessage)
+            onError?.(errorMessage)
             return
         }
 
         setIsExporting(true)
+
+        // Show loading toast
+        const loadingToast = toast.loading('Preparing your talk for download...', {
+            description: 'Generating Word document with your talk content.'
+        })
+
         try {
             const response = await fetch('/api/export-talk', {
                 method: 'POST',
@@ -42,6 +51,9 @@ export default function TalkDisplayWrapper({
                 },
                 body: JSON.stringify({ talkId: talk.id }),
             })
+
+            // Dismiss loading toast
+            toast.dismiss(loadingToast)
 
             if (response.ok) {
                 // Get the filename from the response headers
@@ -58,12 +70,29 @@ export default function TalkDisplayWrapper({
                 a.click()
                 document.body.removeChild(a)
                 URL.revokeObjectURL(url)
+
+                // Show success toast
+                toast.success('Talk exported successfully!', {
+                    description: `Your talk has been downloaded as ${filename}`,
+                    duration: 4000
+                })
             } else {
                 const errorData = await response.json()
-                onError?.(errorData.error || 'Export failed')
+                const errorMessage = errorData.error || 'Export failed'
+                toast.error('Failed to export talk', {
+                    description: errorMessage
+                })
+                onError?.(errorMessage)
             }
         } catch (error) {
-            onError?.(error instanceof Error ? error.message : 'Export failed')
+            // Dismiss loading toast
+            toast.dismiss(loadingToast)
+
+            const errorMessage = error instanceof Error ? error.message : 'Export failed'
+            toast.error('Failed to export talk', {
+                description: errorMessage
+            })
+            onError?.(errorMessage)
         } finally {
             setIsExporting(false)
         }
@@ -71,20 +100,48 @@ export default function TalkDisplayWrapper({
 
     const handleSave = async () => {
         if (!isAuthenticated) {
-            onError?.('You must be logged in to save talks')
+            const errorMessage = 'You must be logged in to save talks'
+            toast.error(errorMessage)
+            onError?.(errorMessage)
             return
         }
 
         setIsSaving(true)
+
+        // Show loading toast
+        const loadingToast = toast.loading('Saving your talk...', {
+            description: 'Please wait while we save your talk to your account.'
+        })
+
         try {
             const result = await saveTalkToDatabase(talk)
+
+            // Dismiss loading toast
+            toast.dismiss(loadingToast)
+
             if (result.success && result.talkId) {
+                // Show success toast
+                toast.success('Talk saved successfully!', {
+                    description: 'Your talk has been saved to your account and you can access it from your dashboard.',
+                    duration: 4000
+                })
                 onSaveSuccess?.(result.talkId)
             } else {
-                onError?.(result.error || 'Failed to save talk')
+                const errorMessage = result.error || 'Failed to save talk'
+                toast.error('Failed to save talk', {
+                    description: errorMessage
+                })
+                onError?.(errorMessage)
             }
         } catch (error) {
-            onError?.(error instanceof Error ? error.message : 'Failed to save talk')
+            // Dismiss loading toast
+            toast.dismiss(loadingToast)
+
+            const errorMessage = error instanceof Error ? error.message : 'Failed to save talk'
+            toast.error('Failed to save talk', {
+                description: errorMessage
+            })
+            onError?.(errorMessage)
         } finally {
             setIsSaving(false)
         }

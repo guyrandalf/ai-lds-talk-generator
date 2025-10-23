@@ -163,7 +163,7 @@ export async function processQuestionnaire(formData: FormData): Promise<Processe
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0].message
+        error: error.issues[0].message
       }
     }
 
@@ -229,7 +229,7 @@ export async function processQuestionnaireData(data: TalkQuestionnaireData): Pro
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0].message
+        error: error.issues[0].message
       }
     }
 

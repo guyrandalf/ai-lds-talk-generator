@@ -51,7 +51,7 @@ export default async function DashboardPage() {
                                         Create a personalized talk using official Church content
                                     </p>
                                     <Link
-                                        href="/questionnaire"
+                                        href="/generate"
                                         className="inline-flex items-center px-6 py-3 bg-white text-blue-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors"
                                     >
                                         Start Creating
@@ -127,7 +127,7 @@ export default async function DashboardPage() {
                         </div>
                         <div className="p-6 space-y-4">
                             <Link
-                                href="/questionnaire"
+                                href="/generate"
                                 className="flex items-center p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group"
                             >
                                 <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-800 transition-colors">

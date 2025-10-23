@@ -47,7 +47,9 @@ export default function RootLayout({
         <ErrorBoundary>
           <Navigation />
           {children}
-          <Toaster />
+          <Toaster
+            position="top-center"
+          />
         </ErrorBoundary>
       </body>
     </html>
