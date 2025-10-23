@@ -18,7 +18,7 @@ export default function Footer() {
                                 asChild
                             >
                                 <a
-                                    href="https://www.linkedin.com/in/randalf-ehigiator"
+                                    href="https://www.linkedin.com/in/randalf"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="flex items-center gap-1"
