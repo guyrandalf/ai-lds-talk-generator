@@ -1,31 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { getSavedTalkById, exportTalkToWord } from '@/lib/actions/talks'
-import { checkAPIRateLimit } from '@/lib/security/rateLimit'
-import { createRateLimitHeaders } from '@/lib/security/rateLimitUtils'
-import { validateCSRFMiddleware } from '@/lib/security/csrf'
 import { sanitizeInput } from '@/lib/security/inputSanitization'
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
-    const rateLimitResult = await checkAPIRateLimit(request)
-    if (!rateLimitResult.allowed) {
-      const headers = createRateLimitHeaders(rateLimitResult)
-      return NextResponse.json(
-        { error: 'Rate limit exceeded. Please try again later.' },
-        { status: 429, headers }
-      )
-    }
-
-    // CSRF validation
-    const csrfValid = await validateCSRFMiddleware(request)
-    if (!csrfValid) {
-      return NextResponse.json(
-        { error: 'CSRF token validation failed' },
-        { status: 403 }
-      )
-    }
 
     // Check authentication
     const user = await getCurrentUser()

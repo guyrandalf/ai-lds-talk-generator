@@ -1,28 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { validateCSRFMiddleware } from './lib/security/csrf'
-import { checkAPIRateLimit, checkAuthRateLimit, checkFormRateLimit, type RateLimitResult } from './lib/security/rateLimit'
-import { createRateLimitHeaders } from './lib/security/rateLimitUtils'
-
-// Define protected routes that require CSRF protection
-const CSRF_PROTECTED_ROUTES = [
-  '/api/',
-  '/auth/',
-  '/dashboard',
-  '/settings',
-  '/generate',
-  '/questionnaire'
-]
-
-// Define rate limit configurations for different routes
-const RATE_LIMIT_ROUTES = {
-  auth: ['/api/auth', '/auth/login', '/auth/register'],
-  forms: ['/questionnaire', '/settings', '/generate'],
-  api: ['/api/']
-}
 
 /**
- * Combined proxy and security middleware for Next.js 16
+ * Simplified middleware for Next.js 16 - Authentication and Security Headers only
  */
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -41,35 +21,6 @@ export default async function proxy(request: NextRequest) {
       return response
     }
 
-    // Rate limiting
-    const rateLimitResult = await applyRateLimit(request, pathname)
-    if (!rateLimitResult.allowed) {
-      return createRateLimitResponse(rateLimitResult)
-    }
-
-    // Add rate limit headers to response
-    const rateLimitHeaders = createRateLimitHeaders(rateLimitResult)
-    Object.entries(rateLimitHeaders).forEach(([key, value]) => {
-      response.headers.set(key, value)
-    })
-
-    // CSRF protection for protected routes
-    if (shouldApplyCSRFProtection(pathname)) {
-      const csrfValid = await validateCSRFMiddleware(request)
-      if (!csrfValid) {
-        return new NextResponse(
-          JSON.stringify({ error: 'CSRF token validation failed' }),
-          {
-            status: 403,
-            headers: {
-              'Content-Type': 'application/json',
-              ...getSecurityHeaders()
-            }
-          }
-        )
-      }
-    }
-
     // Authentication logic
     const authResult = await handleAuthentication(request, pathname)
     if (authResult) {
@@ -82,7 +33,7 @@ export default async function proxy(request: NextRequest) {
 
     // Return a generic error response
     return new NextResponse(
-      JSON.stringify({ error: 'Security validation failed' }),
+      JSON.stringify({ error: 'Authentication validation failed' }),
       {
         status: 500,
         headers: {
@@ -137,59 +88,7 @@ async function handleAuthentication(request: NextRequest, pathname: string) {
   return null
 }
 
-/**
- * Determines if CSRF protection should be applied to a route
- */
-function shouldApplyCSRFProtection(pathname: string): boolean {
-  return CSRF_PROTECTED_ROUTES.some(route => pathname.startsWith(route))
-}
 
-/**
- * Applies appropriate rate limiting based on the route
- */
-async function applyRateLimit(request: NextRequest, pathname: string) {
-  // Determine rate limit type based on route
-  if (RATE_LIMIT_ROUTES.auth.some(route => pathname.startsWith(route))) {
-    return await checkAuthRateLimit(request)
-  }
-
-  if (RATE_LIMIT_ROUTES.forms.some(route => pathname.startsWith(route))) {
-    return await checkFormRateLimit(request)
-  }
-
-  if (RATE_LIMIT_ROUTES.api.some(route => pathname.startsWith(route))) {
-    return await checkAPIRateLimit(request)
-  }
-
-  // Default to API rate limiting for unmatched routes
-  return await checkAPIRateLimit(request)
-}
-
-/**
- * Creates a rate limit exceeded response
- */
-function createRateLimitResponse(rateLimitResult: RateLimitResult) {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...getSecurityHeaders(),
-    ...createRateLimitHeaders(rateLimitResult)
-  }
-
-  const message = rateLimitResult.blocked
-    ? 'Rate limit exceeded. You have been temporarily blocked.'
-    : 'Rate limit exceeded. Please try again later.'
-
-  return new NextResponse(
-    JSON.stringify({
-      error: message,
-      retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
-    }),
-    {
-      status: 429,
-      headers
-    }
-  )
-}
 
 /**
  * Adds comprehensive security headers to the response

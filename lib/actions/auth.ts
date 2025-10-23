@@ -6,7 +6,6 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { PrismaClient } from '@prisma/client'
 import { sanitizeInput } from '../security/inputSanitization'
-import { validateCSRFToken } from '../security/csrf'
 
 const prisma = new PrismaClient()
 
@@ -45,15 +44,6 @@ export type AuthResult = {
 
 export async function registerUser(formData: FormData): Promise<AuthResult> {
   try {
-    // Validate CSRF token
-    const csrfToken = formData.get('csrf-token') as string
-    const isValidCSRF = await validateCSRFToken(csrfToken)
-    if (!isValidCSRF) {
-      return {
-        success: false,
-        error: 'Security validation failed. Please refresh the page and try again.'
-      }
-    }
 
     const rawData = {
       email: formData.get('email') as string,
@@ -62,11 +52,11 @@ export async function registerUser(formData: FormData): Promise<AuthResult> {
       lastName: formData.get('lastName') as string,
     }
 
-    // Sanitize inputs
-    const emailResult = await sanitizeInput(rawData.email, 'email')
-    const firstNameResult = await sanitizeInput(rawData.firstName, 'name')
-    const lastNameResult = await sanitizeInput(rawData.lastName, 'name')
-    const passwordResult = await sanitizeInput(rawData.password, 'password')
+    // Sanitize inputs (don't remove sensitive info for registration fields)
+    const emailResult = await sanitizeInput(rawData.email, 'email', { removeSensitiveInfo: false })
+    const firstNameResult = await sanitizeInput(rawData.firstName, 'name', { removeSensitiveInfo: false })
+    const lastNameResult = await sanitizeInput(rawData.lastName, 'name', { removeSensitiveInfo: false })
+    const passwordResult = await sanitizeInput(rawData.password, 'password', { removeSensitiveInfo: false })
 
     if (!emailResult.success || !firstNameResult.success || !lastNameResult.success || !passwordResult.success) {
       return {
@@ -86,11 +76,13 @@ export async function registerUser(formData: FormData): Promise<AuthResult> {
     const validatedData = registerSchema.parse(sanitizedData)
 
     // Check if user already exists
+    console.log('Checking for existing user with email:', validatedData.email)
     const existingUser = await prisma.user.findUnique({
       where: { email: validatedData.email }
     })
 
     if (existingUser) {
+      console.log('User already exists')
       return {
         success: false,
         error: 'An account with this email already exists'
@@ -98,9 +90,11 @@ export async function registerUser(formData: FormData): Promise<AuthResult> {
     }
 
     // Hash password
+    console.log('Hashing password...')
     const hashedPassword = await bcrypt.hash(validatedData.password, 12)
 
     // Create user
+    console.log('Creating user...')
     const user = await prisma.user.create({
       data: {
         email: validatedData.email,
@@ -115,6 +109,7 @@ export async function registerUser(formData: FormData): Promise<AuthResult> {
         lastName: true,
       }
     })
+    console.log('User created successfully:', user.email)
 
     // Create session
     await createSession(user.id)
@@ -141,24 +136,15 @@ export async function registerUser(formData: FormData): Promise<AuthResult> {
 
 export async function loginUser(formData: FormData): Promise<AuthResult> {
   try {
-    // Validate CSRF token
-    const csrfToken = formData.get('csrf-token') as string
-    const isValidCSRF = await validateCSRFToken(csrfToken)
-    if (!isValidCSRF) {
-      return {
-        success: false,
-        error: 'Security validation failed. Please refresh the page and try again.'
-      }
-    }
 
     const rawData = {
       email: formData.get('email') as string,
       password: formData.get('password') as string,
     }
 
-    // Sanitize inputs
-    const emailResult = await sanitizeInput(rawData.email, 'email')
-    const passwordResult = await sanitizeInput(rawData.password, 'password')
+    // Sanitize inputs (don't remove sensitive info for login fields)
+    const emailResult = await sanitizeInput(rawData.email, 'email', { removeSensitiveInfo: false })
+    const passwordResult = await sanitizeInput(rawData.password, 'password', { removeSensitiveInfo: false })
 
     if (!emailResult.success || !passwordResult.success) {
       return {
@@ -176,10 +162,12 @@ export async function loginUser(formData: FormData): Promise<AuthResult> {
     const validatedData = loginSchema.parse(sanitizedData)
 
     // Find user
+    console.log('Looking for user with email:', validatedData.email)
     const user = await prisma.user.findUnique({
       where: { email: validatedData.email }
     })
 
+    console.log('User found:', user ? 'Yes' : 'No')
     if (!user) {
       return {
         success: false,
@@ -188,7 +176,9 @@ export async function loginUser(formData: FormData): Promise<AuthResult> {
     }
 
     // Verify password
+    console.log('Comparing password...')
     const isValidPassword = await bcrypt.compare(validatedData.password, user.password)
+    console.log('Password valid:', isValidPassword)
 
     if (!isValidPassword) {
       return {
@@ -315,15 +305,6 @@ export async function getCurrentUser(): Promise<User | null> {
 
 export async function updateProfile(formData: FormData): Promise<AuthResult> {
   try {
-    // Validate CSRF token
-    const csrfToken = formData.get('csrf-token') as string
-    const isValidCSRF = await validateCSRFToken(csrfToken)
-    if (!isValidCSRF) {
-      return {
-        success: false,
-        error: 'Security validation failed. Please refresh the page and try again.'
-      }
-    }
 
     const session = await getSession()
 
@@ -339,9 +320,10 @@ export async function updateProfile(formData: FormData): Promise<AuthResult> {
       lastName: formData.get('lastName') as string,
     }
 
-    // Sanitize inputs
-    const firstNameResult = await sanitizeInput(rawData.firstName, 'name')
-    const lastNameResult = await sanitizeInput(rawData.lastName, 'name')
+    // Sanitize inputs (don't remove sensitive info for profile fields)
+    const firstNameResult = await sanitizeInput(rawData.firstName, 'name', { removeSensitiveInfo: false })
+    const lastNameResult = await sanitizeInput(rawData.lastName, 'name', { removeSensitiveInfo: false })
+
 
     if (!firstNameResult.success || !lastNameResult.success) {
       return {
@@ -357,6 +339,7 @@ export async function updateProfile(formData: FormData): Promise<AuthResult> {
 
     // Validate input
     const validatedData = profileUpdateSchema.parse(sanitizedData)
+
 
     // Update user profile
     const updatedUser = await prisma.user.update({
@@ -399,15 +382,6 @@ export async function updateProfile(formData: FormData): Promise<AuthResult> {
 
 export async function changePassword(formData: FormData): Promise<AuthResult> {
   try {
-    // Validate CSRF token
-    const csrfToken = formData.get('csrf-token') as string
-    const isValidCSRF = await validateCSRFToken(csrfToken)
-    if (!isValidCSRF) {
-      return {
-        success: false,
-        error: 'Security validation failed. Please refresh the page and try again.'
-      }
-    }
 
     const session = await getSession()
 
@@ -424,10 +398,10 @@ export async function changePassword(formData: FormData): Promise<AuthResult> {
       confirmPassword: formData.get('confirmPassword') as string,
     }
 
-    // Sanitize inputs (passwords need special handling)
-    const currentPasswordResult = await sanitizeInput(rawData.currentPassword, 'password')
-    const newPasswordResult = await sanitizeInput(rawData.newPassword, 'password')
-    const confirmPasswordResult = await sanitizeInput(rawData.confirmPassword, 'password')
+    // Sanitize inputs (passwords need special handling, don't remove sensitive info)
+    const currentPasswordResult = await sanitizeInput(rawData.currentPassword, 'password', { removeSensitiveInfo: false })
+    const newPasswordResult = await sanitizeInput(rawData.newPassword, 'password', { removeSensitiveInfo: false })
+    const confirmPasswordResult = await sanitizeInput(rawData.confirmPassword, 'password', { removeSensitiveInfo: false })
 
     if (!currentPasswordResult.success || !newPasswordResult.success || !confirmPasswordResult.success) {
       return {

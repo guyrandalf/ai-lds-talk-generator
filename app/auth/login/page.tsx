@@ -1,7 +1,7 @@
 import LoginForm from '@/components/auth/LoginForm'
 import AuthLayout from '@/components/auth/AuthLayout'
 
-export default function LoginPage() {
+export default async function LoginPage() {
     return (
         <AuthLayout
             title="Welcome Back"

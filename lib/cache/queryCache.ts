@@ -1,50 +1,97 @@
-import NodeCache from 'node-cache'
+// Simple in-memory cache implementation
+interface CacheItem<T> {
+    value: T
+    expires: number
+}
+
+class SimpleCache {
+    private cache = new Map<string, CacheItem<any>>()
+    private ttl: number
+
+    constructor(ttlSeconds: number = 300) {
+        this.ttl = ttlSeconds * 1000 // Convert to milliseconds
+
+        // Clean up expired items every minute
+        setInterval(() => {
+            this.cleanup()
+        }, 60000)
+    }
+
+    get<T>(key: string): T | undefined {
+        const item = this.cache.get(key)
+        if (!item) return undefined
+
+        if (Date.now() > item.expires) {
+            this.cache.delete(key)
+            return undefined
+        }
+
+        return item.value
+    }
+
+    set<T>(key: string, value: T, customTtl?: number): boolean {
+        const ttl = customTtl ? customTtl * 1000 : this.ttl
+        this.cache.set(key, {
+            value,
+            expires: Date.now() + ttl
+        })
+        return true
+    }
+
+    del(key: string): number {
+        return this.cache.delete(key) ? 1 : 0
+    }
+
+    has(key: string): boolean {
+        const item = this.cache.get(key)
+        if (!item) return false
+
+        if (Date.now() > item.expires) {
+            this.cache.delete(key)
+            return false
+        }
+
+        return true
+    }
+
+    flushAll(): void {
+        this.cache.clear()
+    }
+
+    getStats() {
+        return {
+            keys: this.cache.size,
+            hits: 0, // Simple implementation doesn't track hits
+            misses: 0
+        }
+    }
+
+    private cleanup(): void {
+        const now = Date.now()
+        for (const [key, item] of this.cache.entries()) {
+            if (now > item.expires) {
+                this.cache.delete(key)
+            }
+        }
+    }
+}
 
 // Cache configurations for different data types
 const CACHE_CONFIGS = {
-    // User data cache (5 minutes)
-    users: {
-        stdTTL: 5 * 60, // 5 minutes
-        checkperiod: 60, // Check for expired keys every minute
-        maxKeys: 1000
-    },
-
-    // Talk data cache (10 minutes)
-    talks: {
-        stdTTL: 10 * 60, // 10 minutes
-        checkperiod: 2 * 60, // Check every 2 minutes
-        maxKeys: 500
-    },
-
-    // Generated content cache (30 minutes)
-    generated: {
-        stdTTL: 30 * 60, // 30 minutes
-        checkperiod: 5 * 60, // Check every 5 minutes
-        maxKeys: 100
-    },
-
-    // Validation results cache (1 hour)
-    validation: {
-        stdTTL: 60 * 60, // 1 hour
-        checkperiod: 10 * 60, // Check every 10 minutes
-        maxKeys: 200
-    },
-
-    // Church content validation cache (24 hours)
-    churchContent: {
-        stdTTL: 24 * 60 * 60, // 24 hours
-        checkperiod: 60 * 60, // Check every hour
-        maxKeys: 1000
-    }
+    users: 5 * 60, // 5 minutes
+    talks: 10 * 60, // 10 minutes
+    generated: 30 * 60, // 30 minutes
+    validation: 60 * 60, // 1 hour
+    churchContent: 24 * 60 * 60 // 24 hours
 }
 
 // Create cache instances
 const caches = {
-    users: new NodeCache(CACHE_CONFIGS.users),
-    talks: new NodeCache(CACHE_CONFIGS.talks),
-    generated: new NodeCache(CACHE_CONFIGS.generated),
-    validation: new NodeCache(CACHE_CONFIGS.validation),
-    churchContent: new NodeCache(CACHE_CONFIGS.churchContent)
+    users: new SimpleCache(CACHE_CONFIGS.users),
+    talks: new SimpleCache(CACHE_CONFIGS.talks),
+    generated: new SimpleCache(CACHE_CONFIGS.generated),
+    validation: new SimpleCache(CACHE_CONFIGS.validation),
+    churchContent: new SimpleCache(CACHE_CONFIGS.churchContent)
 }
 
 // Cache key generators
@@ -62,7 +109,7 @@ const createCacheKey = {
  * Generic cache operations
  */
 export class QueryCache {
-    private cache: NodeCache
+    private cache: SimpleCache
 
     constructor(cacheType: keyof typeof caches) {
         this.cache = caches[cacheType]

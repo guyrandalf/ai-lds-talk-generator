@@ -5,7 +5,6 @@ import { validateTalkContent } from './validation'
 import { getSession } from './auth'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, UnderlineType } from 'docx'
 import { sanitizeFormData } from '../security/inputSanitization'
-import { validateCSRFToken } from '../security/csrf'
 
 // XAI API Configuration
 const XAI_MAX_RETRIES = 3
@@ -81,15 +80,7 @@ const questionnaireSchema = z.object({
  */
 export async function processQuestionnaire(formData: FormData): Promise<ProcessedQuestionnaireResult> {
   try {
-    // Validate CSRF token
-    const csrfToken = formData.get('csrf-token') as string
-    const isValidCSRF = await validateCSRFToken(csrfToken)
-    if (!isValidCSRF) {
-      return {
-        success: false,
-        error: 'Security validation failed. Please refresh the page and try again.'
-      }
-    }
+
 
     // Sanitize form data with comprehensive security checks
     const fieldConfig = {

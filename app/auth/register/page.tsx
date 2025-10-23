@@ -1,7 +1,7 @@
 import RegisterForm from '@/components/auth/RegisterForm'
 import AuthLayout from '@/components/auth/AuthLayout'
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
     return (
         <AuthLayout
             title="Create Your Account"

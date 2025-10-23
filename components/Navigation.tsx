@@ -1,11 +1,63 @@
+'use client'
+
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { getCurrentUser } from '@/lib/actions/auth'
 import LogoutButton from './auth/LogoutButton'
 import ThemeToggle from './ThemeToggle'
 import { BookOpen } from 'lucide-react'
 
-async function Navigation() {
-    const user = await getCurrentUser()
+interface User {
+    id: string
+    firstName: string
+    lastName: string
+    email: string
+}
+
+function Navigation() {
+    const [user, setUser] = useState<User | null>(null)
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        async function fetchUser() {
+            try {
+                const currentUser = await getCurrentUser()
+                setUser(currentUser)
+            } catch (error) {
+                console.error('Error fetching user:', error)
+                setUser(null)
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchUser()
+    }, [])
+
+    if (loading) {
+        return (
+            <nav className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-sm border-b border-gray-100 dark:border-gray-700 sticky top-0 z-50 transition-colors">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-center h-16">
+                        {/* Logo */}
+                        <div className="flex items-center">
+                            <Link href="/" className="flex items-center space-x-2 group">
+                                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center group-hover:bg-blue-700 transition-colors">
+                                    <BookOpen className="w-5 h-5 text-white" />
+                                </div>
+                                <span className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">
+                                    LDS Talk Generator
+                                </span>
+                            </Link>
+                        </div>
+                        <div className="hidden md:flex items-center space-x-8">
+                            <ThemeToggle />
+                            <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-8 w-20 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        )
+    }
 
     return (
         <nav className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-sm border-b border-gray-100 dark:border-gray-700 sticky top-0 z-50 transition-colors">
