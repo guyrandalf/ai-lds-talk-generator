@@ -6,7 +6,7 @@ import type { ContentViolation } from '@/components/ContentGuidelines'
 /**
  * Converts security violations to user-friendly content feedback
  */
-export function convertViolationsToFeedback(violations: SecurityViolation[]): ContentViolation[] {
+export async function convertViolationsToFeedback(violations: SecurityViolation[]): Promise<ContentViolation[]> {
     return violations.map(violation => ({
         type: violation.type,
         severity: violation.severity,
@@ -170,7 +170,7 @@ function getSuggestionsForViolation(violation: SecurityViolation): string[] {
 /**
  * Generates helpful error messages for common validation errors
  */
-export function getHelpfulErrorMessage(error: string): { message: string; suggestions: string[] } {
+export async function getHelpfulErrorMessage(error: string): Promise<{ message: string; suggestions: string[] }> {
     const lowerError = error.toLowerCase()
 
     if (lowerError.includes('topic') && lowerError.includes('required')) {
@@ -260,7 +260,7 @@ export function getHelpfulErrorMessage(error: string): { message: string; sugges
 /**
  * Generates success messages with tips for improvement
  */
-export function getSuccessMessageWithTips(warningCount: number = 0): { message: string; tips?: string[] } {
+export async function getSuccessMessageWithTips(warningCount: number = 0): Promise<{ message: string; tips?: string[] }> {
     if (warningCount === 0) {
         return {
             message: 'Great! Your content looks perfect and ready for talk generation.',
@@ -287,7 +287,7 @@ export function getSuccessMessageWithTips(warningCount: number = 0): { message: 
 /**
  * Provides contextual help based on the current form field
  */
-export function getFieldHelp(fieldName: string): { description: string; examples: string[] } {
+export async function getFieldHelp(fieldName: string): Promise<{ description: string; examples: string[] }> {
     switch (fieldName) {
         case 'topic':
             return {
