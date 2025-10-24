@@ -83,7 +83,7 @@ function Navigation() {
                                         Sign In
                                     </Link>
                                 </Button>
-                                <Button asChild className="shadow-sm hover:shadow-md bg-blue-600 hover:bg-blue-700">
+                                <Button asChild className="shadow-sm hover:shadow-md text-white bg-blue-600 hover:bg-blue-700">
                                     <Link href="/auth/register">
                                         Create Account
                                     </Link>

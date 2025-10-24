@@ -7,7 +7,7 @@ export interface TalkQuestionnaire {
     topic: string;
     duration: number;
     meetingType: MeetingType;
-    personalStory?: string;
+    personalStory: string;
     gospelLibraryLinks: string[];
     audienceType?: string;
     speakerAge?: string;
@@ -60,7 +60,7 @@ export interface DatabaseTalk {
     topic: string | null;
     personalStory: string | null;
     gospelLibraryLinks: string[];
-    preferences: any; // JSON field from database - using any to match Prisma's JsonValue
+    preferences: unknown; // JSON field from database - using any to match Prisma's JsonValue
     audienceContext: string | null;
     customThemes: string[];
     createdAt: Date;

@@ -322,6 +322,7 @@ export default function TalkQuestionnaire({
                                 <textarea
                                     id="personalStory"
                                     rows={4}
+                                    required
                                     value={formData.personalStory}
                                     onChange={(e) => handleInputChange('personalStory', e.target.value)}
                                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
@@ -329,7 +330,7 @@ export default function TalkQuestionnaire({
                                     disabled={isLoading}
                                 />
                                 <p className="text-sm text-gray-500 mt-2">
-                                    This helps make your talk more personal and authentic. You can leave this blank if you prefer.
+                                    This helps make your talk more personal and authentic.
                                 </p>
                             </div>
                         </div>
