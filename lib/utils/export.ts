@@ -1,4 +1,4 @@
-import { GeneratedTalk } from '@/lib/actions/talks'
+import { GeneratedTalk } from '@/lib/types/talks'
 
 /**
  * Downloads a talk as a Word document

@@ -16,7 +16,7 @@ export default async function DashboardPage() {
 
     // Get initial data for SSR, but components will load independently
     const talksResult = await getUserSavedTalks()
-    const initialTalks = talksResult.success ? talksResult.talks || [] : []
+    const initialTalks = talksResult.success ? talksResult.data || [] : []
 
     return (
         <div className="min-h-screen bg-gray-50">

@@ -1,18 +1,8 @@
 'use client'
 
+import { BreadcrumbItem, BreadcrumbProps } from '@/lib/types/components/navigation'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-
-interface BreadcrumbItem {
-    label: string
-    href?: string
-    current?: boolean
-}
-
-interface BreadcrumbProps {
-    items: BreadcrumbItem[]
-    className?: string
-}
 
 export default function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
     return (

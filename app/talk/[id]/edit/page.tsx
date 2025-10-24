@@ -21,7 +21,7 @@ export default async function EditTalkPage({ params }: EditTalkPageProps) {
     // Get the talk
     const talkResult = await getSavedTalkById(id)
 
-    if (!talkResult.success || !talkResult.talk) {
+    if (!talkResult.success || !talkResult.data) {
         notFound()
     }
 
@@ -41,7 +41,7 @@ export default async function EditTalkPage({ params }: EditTalkPageProps) {
                 </div>
 
                 {/* Edit Form */}
-                <TalkEditClient talk={talkResult.talk} />
+                <TalkEditClient talk={talkResult.data} />
             </div>
         </div>
     )

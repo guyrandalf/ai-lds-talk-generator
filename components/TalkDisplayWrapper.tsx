@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import TalkDisplay from './TalkDisplay'
-import { GeneratedTalk, saveTalkToDatabase } from '@/lib/actions/talks'
+import { saveTalkToDatabase } from '@/lib/actions/talks'
+import { GeneratedTalk } from '@/lib/types/talks/generation'
 
 interface TalkDisplayWrapperProps {
     talk: GeneratedTalk
@@ -119,13 +120,13 @@ export default function TalkDisplayWrapper({
             // Dismiss loading toast
             toast.dismiss(loadingToast)
 
-            if (result.success && result.talkId) {
+            if (result.success && result.data?.talkId) {
                 // Show success toast
                 toast.success('Talk saved successfully!', {
                     description: 'Your talk has been saved to your account and you can access it from your dashboard.',
                     duration: 4000
                 })
-                onSaveSuccess?.(result.talkId)
+                onSaveSuccess?.(result.data.talkId)
             } else {
                 const errorMessage = result.error || 'Failed to save talk'
                 toast.error('Failed to save talk', {

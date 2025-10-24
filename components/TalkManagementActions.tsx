@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { GeneratedTalk, deleteSavedTalk } from '@/lib/actions/talks'
+import { deleteSavedTalk } from '@/lib/actions/talks'
+import { GeneratedTalk } from '@/lib/types/talks/generation'
 import { ShareTalkDialog } from './ShareTalkDialog'
 
 interface TalkManagementActionsProps {

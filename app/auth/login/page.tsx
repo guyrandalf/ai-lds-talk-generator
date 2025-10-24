@@ -7,7 +7,7 @@ export default async function LoginPage() {
             title="Welcome Back"
             subtitle="Sign in to access your saved talks and continue creating inspiring content"
         >
-            <LoginForm />
+            <LoginForm statusCode={0} />
         </AuthLayout>
     )
 }

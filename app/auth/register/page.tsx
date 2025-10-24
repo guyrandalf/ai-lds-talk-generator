@@ -7,7 +7,7 @@ export default async function RegisterPage() {
             title="Create Your Account"
             subtitle="Join thousands of Church members creating inspiring talks with official content"
         >
-            <RegisterForm />
+            <RegisterForm statusCode={0} />
         </AuthLayout>
     )
 }

@@ -25,87 +25,87 @@ export interface ContentFeedbackProps {
     showSuggestions?: boolean
 }
 
+const guidelines = [
+    {
+        category: 'Appropriate Topics',
+        icon: <CheckCircle className="h-5 w-5 text-green-600" />,
+        items: [
+            'Faith, hope, and charity',
+            'Gospel principles and doctrines',
+            'Scripture study and prayer',
+            'Service and discipleship',
+            'Personal testimony and spiritual experiences',
+            'Church history and teachings',
+            'Family and eternal relationships'
+        ]
+    },
+    {
+        category: 'Content to Avoid',
+        icon: <X className="h-5 w-5 text-red-600" />,
+        items: [
+            'Political opinions or partisan content',
+            'Controversial social issues',
+            'Personal attacks or criticism',
+            'Inappropriate language or content',
+            'Non-Church sources or references',
+            'Speculative doctrine or personal theories',
+            'Commercial or promotional content'
+        ]
+    },
+    {
+        category: 'Best Practices',
+        icon: <Lightbulb className="h-5 w-5 text-blue-600" />,
+        items: [
+            'Use official Church sources and scriptures',
+            'Share personal experiences appropriately',
+            'Focus on Christ and His teachings',
+            'Keep content appropriate for all ages',
+            'Maintain a reverent and respectful tone',
+            'Include personal testimony when appropriate',
+            'Ensure content aligns with Church doctrine'
+        ]
+    }
+]
+
+const GuidelinesContent = () => (
+    <div className="space-y-6">
+        {guidelines.map((section, index) => (
+            <div key={index} className="space-y-3">
+                <div className="flex items-center gap-2">
+                    {section.icon}
+                    <h3 className="font-semibold text-lg">{section.category}</h3>
+                </div>
+                <ul className="space-y-2 ml-7">
+                    {section.items.map((item, itemIndex) => (
+                        <li key={itemIndex} className="text-sm text-gray-700 flex items-start gap-2">
+                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full mt-2 flex-shrink-0" />
+                            {item}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        ))}
+
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex items-start gap-2">
+                <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                    <h4 className="font-medium text-blue-900">Remember</h4>
+                    <p className="text-sm text-blue-800 mt-1">
+                        Your talk should inspire, uplift, and help others draw closer to Christ.
+                        Focus on sharing gospel truths with love and testimony.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+)
+
 /**
  * Content Guidelines Display Component
  */
 export function ContentGuidelines({ showInline = false, className = '' }: ContentGuidelineProps) {
     const [isOpen, setIsOpen] = useState(false)
-
-    const guidelines = [
-        {
-            category: 'Appropriate Topics',
-            icon: <CheckCircle className="h-5 w-5 text-green-600" />,
-            items: [
-                'Faith, hope, and charity',
-                'Gospel principles and doctrines',
-                'Scripture study and prayer',
-                'Service and discipleship',
-                'Personal testimony and spiritual experiences',
-                'Church history and teachings',
-                'Family and eternal relationships'
-            ]
-        },
-        {
-            category: 'Content to Avoid',
-            icon: <X className="h-5 w-5 text-red-600" />,
-            items: [
-                'Political opinions or partisan content',
-                'Controversial social issues',
-                'Personal attacks or criticism',
-                'Inappropriate language or content',
-                'Non-Church sources or references',
-                'Speculative doctrine or personal theories',
-                'Commercial or promotional content'
-            ]
-        },
-        {
-            category: 'Best Practices',
-            icon: <Lightbulb className="h-5 w-5 text-blue-600" />,
-            items: [
-                'Use official Church sources and scriptures',
-                'Share personal experiences appropriately',
-                'Focus on Christ and His teachings',
-                'Keep content appropriate for all ages',
-                'Maintain a reverent and respectful tone',
-                'Include personal testimony when appropriate',
-                'Ensure content aligns with Church doctrine'
-            ]
-        }
-    ]
-
-    const GuidelinesContent = () => (
-        <div className="space-y-6">
-            {guidelines.map((section, index) => (
-                <div key={index} className="space-y-3">
-                    <div className="flex items-center gap-2">
-                        {section.icon}
-                        <h3 className="font-semibold text-lg">{section.category}</h3>
-                    </div>
-                    <ul className="space-y-2 ml-7">
-                        {section.items.map((item, itemIndex) => (
-                            <li key={itemIndex} className="text-sm text-gray-700 flex items-start gap-2">
-                                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full mt-2 flex-shrink-0" />
-                                {item}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            ))}
-
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-start gap-2">
-                    <Info className="h-5 w-5 text-blue-600 mt-0.5" />
-                    <div>
-                        <h4 className="font-medium text-blue-900">Remember</h4>
-                        <p className="text-sm text-blue-800 mt-1">
-                            Your talk should inspire, uplift, and help others draw closer to Christ.
-                            Focus on sharing gospel truths with love and testimony.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
 
     if (showInline) {
         return (

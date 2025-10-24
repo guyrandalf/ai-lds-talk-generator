@@ -4,8 +4,8 @@ interface CacheItem<T> {
     expires: number
 }
 
-class SimpleCache {
-    private cache = new Map<string, CacheItem<any>>()
+class SimpleCache<T = unknown> {
+    private cache = new Map<string, CacheItem<T>>()
     private ttl: number
 
     constructor(ttlSeconds: number = 300) {
@@ -17,7 +17,7 @@ class SimpleCache {
         }, 60000)
     }
 
-    get<T>(key: string): T | undefined {
+    get<U = T>(key: string): U | undefined {
         const item = this.cache.get(key)
         if (!item) return undefined
 
@@ -26,13 +26,13 @@ class SimpleCache {
             return undefined
         }
 
-        return item.value
+        return item.value as unknown as U
     }
 
-    set<T>(key: string, value: T, customTtl?: number): boolean {
+    set<U = T>(key: string, value: U, customTtl?: number): boolean {
         const ttl = customTtl ? customTtl * 1000 : this.ttl
         this.cache.set(key, {
-            value,
+            value: value as unknown as T,
             expires: Date.now() + ttl
         })
         return true
@@ -87,11 +87,11 @@ const CACHE_CONFIGS = {
 
 // Create cache instances
 const caches = {
-    users: new SimpleCache(CACHE_CONFIGS.users),
-    talks: new SimpleCache(CACHE_CONFIGS.talks),
-    generated: new SimpleCache(CACHE_CONFIGS.generated),
-    validation: new SimpleCache(CACHE_CONFIGS.validation),
-    churchContent: new SimpleCache(CACHE_CONFIGS.churchContent)
+    users: new SimpleCache<unknown>(CACHE_CONFIGS.users),
+    talks: new SimpleCache<unknown>(CACHE_CONFIGS.talks),
+    generated: new SimpleCache<unknown>(CACHE_CONFIGS.generated),
+    validation: new SimpleCache<unknown>(CACHE_CONFIGS.validation),
+    churchContent: new SimpleCache<unknown>(CACHE_CONFIGS.churchContent)
 }
 
 // Cache key generators
@@ -109,7 +109,7 @@ const createCacheKey = {
  * Generic cache operations
  */
 export class QueryCache {
-    private cache: SimpleCache
+    private cache: SimpleCache<unknown>
 
     constructor(cacheType: keyof typeof caches) {
         this.cache = caches[cacheType]

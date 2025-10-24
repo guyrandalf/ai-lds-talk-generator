@@ -2,7 +2,7 @@
 
 import { withLazyLoading } from '@/components/ui/LazyLoader'
 import { Skeleton } from '@/components/ui/skeleton'
-import { GeneratedTalk } from '@/lib/actions/talks'
+import { GeneratedTalk } from '@/lib/types/talks/generation'
 
 const TalkEditForm = withLazyLoading(
     () => import('@/components/TalkEditForm'),
@@ -29,5 +29,5 @@ interface TalkEditClientProps {
 }
 
 export default function TalkEditClient({ talk }: TalkEditClientProps) {
-    return <TalkEditForm talk={talk} />
+    return <TalkEditForm talk={talk} statusCode={0} />
 }

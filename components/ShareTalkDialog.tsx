@@ -16,33 +16,23 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { UserSearchCombobox } from "./UserSearchCombobox"
 import { toast } from "sonner"
+import { BaseUser } from "@/lib/types/auth/user"
+import { BasicTalk } from "@/lib/types/talks/display"
 
-interface User {
-    id: string
-    email: string
-    firstName: string
-    lastName: string
-}
-
-interface Talk {
-    id: string
-    title: string
-    content: string
-}
 
 interface ShareTalkDialogProps {
-    talk: Talk
+    talk: BasicTalk
     onShareComplete?: () => void
     variant?: 'button' | 'inline'
 }
 
 export function ShareTalkDialog({ talk, onShareComplete, variant = 'button' }: ShareTalkDialogProps) {
     const [open, setOpen] = React.useState(false)
-    const [selectedUsers, setSelectedUsers] = React.useState<User[]>([])
+    const [selectedUsers, setSelectedUsers] = React.useState<BaseUser[]>([])
     const [message, setMessage] = React.useState("")
     const [isSharing, setIsSharing] = React.useState(false)
 
-    const handleUserSelect = (user: User) => {
+    const handleUserSelect = (user: BaseUser) => {
         setSelectedUsers(prev => [...prev, user])
     }
 
@@ -128,7 +118,7 @@ export function ShareTalkDialog({ talk, onShareComplete, variant = 'button' }: S
                 <DialogHeader>
                     <DialogTitle>Share Talk</DialogTitle>
                     <DialogDescription>
-                        Share "{talk.title}&quot; with other users on the platform.
+                        Share &quot;{talk.title}&quot; with other users on the platform.
                     </DialogDescription>
                 </DialogHeader>
 

@@ -6,18 +6,12 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { BookOpen, Menu, User, Settings, LayoutDashboard, Plus, Share2 } from 'lucide-react'
 import LogoutButton from './auth/LogoutButton'
+import { BaseUser } from '@/lib/types/auth/user'
+import { MobileNavigationProps } from '@/lib/types/components/navigation'
 
-interface User {
-    id: string
-    firstName: string
-    lastName: string
-    email: string
-}
 
-interface MobileNavigationDrawerProps {
-    user: User | null
-    isOpen: boolean
-    onOpenChange: (open: boolean) => void
+interface MobileNavigationDrawerProps extends Omit<MobileNavigationProps, 'items'> {
+    user: BaseUser | null
 }
 
 export default function MobileNavigationDrawer({ user, isOpen, onOpenChange }: MobileNavigationDrawerProps) {

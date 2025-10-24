@@ -29,6 +29,7 @@ export default function ProgressBar({
             return () => clearTimeout(timer)
         } else {
             setDisplayProgress(Math.min(Math.max(progress, 0), 100))
+            return undefined
         }
     }, [progress, animated])
 
@@ -164,10 +165,10 @@ export function StepProgress({ steps, currentStep, completedSteps = [] }: StepPr
                     <div key={index} className="flex items-center">
                         <div
                             className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${completedSteps.includes(index)
-                                    ? 'bg-green-600 text-white'
-                                    : index === currentStep
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                                ? 'bg-green-600 text-white'
+                                : index === currentStep
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                                 }`}
                         >
                             {completedSteps.includes(index) ? '✓' : index + 1}
@@ -176,8 +177,8 @@ export function StepProgress({ steps, currentStep, completedSteps = [] }: StepPr
                         {index < steps.length - 1 && (
                             <div
                                 className={`w-12 h-0.5 mx-2 transition-colors ${completedSteps.includes(index) || index < currentStep
-                                        ? 'bg-green-600'
-                                        : 'bg-gray-200 dark:bg-gray-700'
+                                    ? 'bg-green-600'
+                                    : 'bg-gray-200 dark:bg-gray-700'
                                     }`}
                             />
                         )}

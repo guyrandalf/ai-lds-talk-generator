@@ -56,12 +56,12 @@ export default function ForgotPasswordPage() {
                     <CardHeader className="text-center">
                         <CardTitle>Check Your Email</CardTitle>
                         <CardDescription>
-                            We've sent password reset instructions to your email address if an account exists.
+                            We&apos;ve sent password reset instructions to your email address if an account exists.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="text-center text-sm text-muted-foreground">
-                            <p>Didn't receive the email? Check your spam folder or try again in a few minutes.</p>
+                            <p>Didn&apos;t receive the email? Check your spam folder or try again in a few minutes.</p>
                         </div>
                         <div className="flex flex-col space-y-2">
                             <Button

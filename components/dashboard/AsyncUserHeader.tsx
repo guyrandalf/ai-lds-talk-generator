@@ -4,16 +4,10 @@ import { useAsyncData } from '@/hooks/useAsyncData'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { UserHeaderSkeleton } from '@/components/ui/SkeletonLoaders'
 import { toast } from 'sonner'
-
-interface User {
-    id: string
-    firstName: string
-    lastName: string
-    email: string
-}
+import { BaseUser } from '@/lib/types/auth/user'
 
 interface AsyncUserHeaderProps {
-    initialUser?: User | null
+    initialUser?: BaseUser | null
 }
 
 export default function AsyncUserHeader({ initialUser }: AsyncUserHeaderProps) {

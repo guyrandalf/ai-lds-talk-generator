@@ -7,7 +7,7 @@ import { z } from 'zod';
 const prisma = new PrismaClient();
 
 const forgotPasswordSchema = z.object({
-    email: z.string().email('Please enter a valid email address')
+    email: z.email('Please enter a valid email address')
 });
 
 export async function POST(request: NextRequest) {

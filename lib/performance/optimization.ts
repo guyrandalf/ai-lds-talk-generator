@@ -25,7 +25,7 @@ export const DATABASE_CONFIG = {
 /**
  * Memoization wrapper for expensive operations
  */
-export function memoize<T extends (...args: any[]) => any>(
+export function memoize<T extends (...args: unknown[]) => unknown>(
     fn: T,
     keyGenerator?: (...args: Parameters<T>) => string
 ): T {
@@ -43,7 +43,7 @@ export function memoize<T extends (...args: any[]) => any>(
         }
 
         // Execute function and cache result
-        const result = fn(...args)
+        const result = fn(...args) as ReturnType<T>
         cache.set(key, { value: result, timestamp: now })
 
         // Clean up old entries periodically
@@ -62,7 +62,7 @@ export function memoize<T extends (...args: any[]) => any>(
 /**
  * Debounce function for reducing API calls
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
     func: T,
     wait: number
 ): (...args: Parameters<T>) => void {
@@ -82,7 +82,7 @@ export function debounce<T extends (...args: any[]) => any>(
 /**
  * Throttle function for rate limiting
  */
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
     func: T,
     limit: number
 ): (...args: Parameters<T>) => void {
@@ -250,7 +250,7 @@ export function optimizeMemoryUsage() {
  * Next.js cache optimization
  */
 export const createOptimizedCache = <T>(
-    fn: (...args: any[]) => Promise<T>,
+    fn: (...args: unknown[]) => Promise<T>,
     keyParts: string[],
     revalidate: number = 3600 // 1 hour default
 ) => {
@@ -269,7 +269,7 @@ export const createOptimizedCache = <T>(
  */
 export const optimizeQuery = {
     // Select only needed fields
-    selectFields: <T extends Record<string, any>>(
+    selectFields: <T extends Record<string, unknown>>(
         fields: (keyof T)[]
     ): Record<string, boolean> => {
         return fields.reduce((acc, field) => {
@@ -330,8 +330,8 @@ export const bundleOptimization = {
     ) => {
         return async (): Promise<T> => {
             try {
-                const module = await importFn()
-                return module.default
+                const m = await importFn()
+                return m.default
             } catch (error) {
                 console.error('Dynamic import failed:', error)
                 if (fallback) {

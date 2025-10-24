@@ -24,12 +24,12 @@ export async function POST(request: NextRequest) {
 
     // Get the talk
     const talkResult = await getSavedTalkById(talkId)
-    if (!talkResult.success || !talkResult.talk) {
+    if (!talkResult.success || !talkResult.data) {
       return NextResponse.json({ error: 'Talk not found' }, { status: 404 })
     }
 
     // Export to Word
-    const exportResult = await exportTalkToWord(talkResult.talk)
+    const exportResult = await exportTalkToWord(talkResult.data)
     if (!exportResult.success || !exportResult.buffer || !exportResult.filename) {
       return NextResponse.json({ error: exportResult.error || 'Export failed' }, { status: 500 })
     }

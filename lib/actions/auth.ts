@@ -6,19 +6,22 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { PrismaClient } from '@prisma/client'
 import { sanitizeInput } from '../security/inputSanitization'
+import { ApiResponse } from '../types/api/responses'
+import { BaseUser } from '../types/auth/user'
+
 
 const prisma = new PrismaClient()
 
 // Validation schemas
 const registerSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  email: z.email('Please enter a valid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters long'),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
 })
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  email: z.email('Please enter a valid email address'),
   password: z.string().min(1, 'Password is required'),
 })
 
@@ -36,13 +39,9 @@ const passwordChangeSchema = z.object({
   path: ["confirmPassword"],
 })
 
-export type AuthResult = {
-  success: boolean
-  error?: string
-  user?: User
-}
 
-export async function registerUser(formData: FormData): Promise<AuthResult> {
+
+export async function registerUser(formData: FormData): Promise<ApiResponse<BaseUser>> {
   try {
 
     const rawData = {
@@ -116,7 +115,7 @@ export async function registerUser(formData: FormData): Promise<AuthResult> {
 
     return {
       success: true,
-      user
+      data: user
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -134,7 +133,7 @@ export async function registerUser(formData: FormData): Promise<AuthResult> {
   }
 }
 
-export async function loginUser(formData: FormData): Promise<AuthResult> {
+export async function loginUser(formData: FormData): Promise<ApiResponse<BaseUser>> {
   try {
 
     const rawData = {
@@ -192,7 +191,7 @@ export async function loginUser(formData: FormData): Promise<AuthResult> {
 
     return {
       success: true,
-      user: {
+      data: {
         id: user.id,
         email: user.email,
         firstName: user.firstName,
@@ -258,14 +257,7 @@ export async function getSession(): Promise<{ userId: string } | null> {
   }
 }
 
-export type User = {
-  id: string
-  email: string
-  firstName: string
-  lastName: string
-}
-
-export async function getCurrentUser(): Promise<User | null> {
+export async function getCurrentUser(): Promise<BaseUser | null> {
   const session = await getSession()
 
   if (!session) {
@@ -275,7 +267,7 @@ export async function getCurrentUser(): Promise<User | null> {
   try {
     // Try to get user from cache first
     const { getCachedUser, setCachedUser } = await import('../cache/queryCache')
-    const cachedUser = await getCachedUser(session.userId) as User | null
+    const cachedUser = await getCachedUser(session.userId) as BaseUser | null
 
     if (cachedUser) {
       return cachedUser
@@ -303,7 +295,7 @@ export async function getCurrentUser(): Promise<User | null> {
   }
 }
 
-export async function updateProfile(formData: FormData): Promise<AuthResult> {
+export async function updateProfile(formData: FormData): Promise<ApiResponse<BaseUser>> {
   try {
 
     const session = await getSession()
@@ -362,7 +354,7 @@ export async function updateProfile(formData: FormData): Promise<AuthResult> {
 
     return {
       success: true,
-      user: updatedUser
+      data: updatedUser
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -380,7 +372,7 @@ export async function updateProfile(formData: FormData): Promise<AuthResult> {
   }
 }
 
-export async function changePassword(formData: FormData): Promise<AuthResult> {
+export async function changePassword(formData: FormData): Promise<ApiResponse<void>> {
   try {
 
     const session = await getSession()

@@ -17,7 +17,7 @@ const CHURCH_DOMAINS = [
 ]
 
 // URL validation schema
-const urlSchema = z.string().url('Please enter a valid URL')
+const urlSchema = z.url('Please enter a valid URL')
 
 /**
  * Validates that a URL is from an official Church domain

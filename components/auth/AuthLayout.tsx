@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowLeft, BookOpen } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 
 interface AuthLayoutProps {
     children: React.ReactNode

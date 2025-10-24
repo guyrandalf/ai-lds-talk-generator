@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
-import { TalkQuestionnaireData } from '@/components/TalkQuestionnaire'
+import type { TalkQuestionnaire } from '@/lib/types/talks/generation'
 import TalkDisplayWrapper from '@/components/TalkDisplayWrapper'
 import { TalkGenerationBreadcrumb } from '@/components/Breadcrumb'
 import UnsavedChangesDialog from '@/components/UnsavedChangesDialog'
@@ -28,7 +28,9 @@ const TalkQuestionnaire = withLazyLoading(
     }
 )
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
-import { generateTalk, GeneratedTalk } from '@/lib/actions/talks'
+import { useGuardedNavigation } from '@/hooks/useGuardedNavigation'
+import { generateTalk } from '@/lib/actions/talks'
+import type { GeneratedTalk } from '@/lib/types/talks/generation'
 import { getCurrentUser } from '@/lib/actions/auth'
 
 function GeneratePageContent() {
@@ -38,7 +40,6 @@ function GeneratePageContent() {
     const [error, setError] = useState<string | null>(null)
     const [generationProgress, setGenerationProgress] = useState(0)
     const [generationStage, setGenerationStage] = useState<'processing' | 'generating' | 'validating' | 'complete'>('processing')
-    const router = useRouter()
     const searchParams = useSearchParams()
     const initialTopic = searchParams.get('topic') || ''
 
@@ -47,6 +48,9 @@ function GeneratePageContent() {
         enabled: true,
         warningMessage: 'You have a generated talk that hasn\'t been saved. Are you sure you want to leave? Your talk will be lost.'
     })
+
+    // Use guarded navigation that respects the navigation guard
+    const guardedRouter = useGuardedNavigation(navigationGuard)
 
     // Check authentication status on component mount
     useEffect(() => {
@@ -59,9 +63,9 @@ function GeneratePageContent() {
     useEffect(() => {
         const hasUnsavedTalk = currentStep === 'display' && generatedTalk && !generatedTalk.id
         navigationGuard.setUnsavedChanges(!!hasUnsavedTalk)
-    }, [currentStep, generatedTalk, navigationGuard])
+    }, [currentStep, generatedTalk, navigationGuard.setUnsavedChanges])
 
-    const handleQuestionnaireSubmit = async (data: TalkQuestionnaireData) => {
+    const handleQuestionnaireSubmit = async (data: TalkQuestionnaire) => {
         setCurrentStep('generating')
         setError(null)
         setGenerationProgress(0)
@@ -97,8 +101,8 @@ function GeneratePageContent() {
             // Dismiss loading toast
             toast.dismiss(loadingToast)
 
-            if (result.success && result.talk) {
-                setGeneratedTalk(result.talk)
+            if (result.success && result.data) {
+                setGeneratedTalk(result.data)
 
                 // Small delay to show completion
                 setTimeout(() => {
@@ -151,7 +155,7 @@ function GeneratePageContent() {
 
         // Redirect to dashboard after successful save
         setTimeout(() => {
-            router.push('/dashboard')
+            guardedRouter.push('/dashboard')
         }, 1500) // Small delay to let the success toast show
     }
 
@@ -196,10 +200,7 @@ function GeneratePageContent() {
                 {currentStep === 'questionnaire' && (
                     <TalkQuestionnaire
                         onSubmit={handleQuestionnaireSubmit}
-                        isLoading={false}
                         initialTopic={initialTopic}
-                        progress={generationProgress}
-                        stage={generationStage}
                     />
                 )}
 

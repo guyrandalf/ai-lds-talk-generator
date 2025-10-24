@@ -6,16 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-
-interface User {
-    id: string
-    email: string
-    firstName: string
-    lastName: string
-}
+import { BaseUser } from '@/lib/types/auth/user'
 
 interface ProfileUpdateFormProps {
-    user: User
+    user: BaseUser
 }
 
 export default function ProfileUpdateForm({ user }: ProfileUpdateFormProps) {

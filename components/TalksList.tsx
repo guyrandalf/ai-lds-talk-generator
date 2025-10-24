@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { GeneratedTalk } from '@/lib/actions/talks'
+import { GeneratedTalk } from '@/lib/types/talks/generation'
 import TalkManagementActions from './TalkManagementActions'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

@@ -18,7 +18,7 @@ export default async function TalkPage({ params }: TalkPageProps) {
     // Get the saved talk
     const result = await getSavedTalkById(id)
 
-    if (!result.success || !result.talk) {
+    if (!result.success || !result.data) {
         notFound()
     }
 
@@ -26,7 +26,7 @@ export default async function TalkPage({ params }: TalkPageProps) {
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12">
             <div className="max-w-6xl mx-auto px-6 sm:px-6 lg:px-8">
                 <TalkDisplayWrapper
-                    talk={result.talk}
+                    talk={result.data}
                     isAuthenticated={true}
                     showManagementActions={true}
                     className="mb-8"

@@ -148,7 +148,12 @@ export async function checkRateLimit(
 ): Promise<RateLimitResult> {
     try {
         // Build where clause for user identification
-        const whereClause: any = {
+        const whereClause: {
+            createdAt: { gte: Date }
+            userId?: string
+            ipAddress?: string
+            sessionId?: string
+        } = {
             createdAt: {
                 gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
             }

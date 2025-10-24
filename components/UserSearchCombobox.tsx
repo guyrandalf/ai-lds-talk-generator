@@ -17,17 +17,13 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
+import { BaseUser } from "@/lib/types/auth/user"
+import { BaseComponentProps, LoadingProps } from "@/lib/types/components/common"
 
-interface User {
-    id: string
-    email: string
-    firstName: string
-    lastName: string
-}
 
-interface UserSearchComboboxProps {
-    selectedUsers: User[]
-    onUserSelect: (user: User) => void
+interface UserSearchComboboxProps extends BaseComponentProps, LoadingProps {
+    selectedUsers: BaseUser[]
+    onUserSelect: (user: BaseUser) => void
     onUserRemove: (userId: string) => void
     placeholder?: string
 }
@@ -40,7 +36,7 @@ export function UserSearchCombobox({
 }: UserSearchComboboxProps) {
     const [open, setOpen] = React.useState(false)
     const [searchQuery, setSearchQuery] = React.useState("")
-    const [searchResults, setSearchResults] = React.useState<User[]>([])
+    const [searchResults, setSearchResults] = React.useState<BaseUser[]>([])
     const [isLoading, setIsLoading] = React.useState(false)
 
     // Debounce search to avoid too many API calls
@@ -70,7 +66,7 @@ export function UserSearchCombobox({
         return () => clearTimeout(timeoutId)
     }, [searchQuery])
 
-    const handleUserSelect = (user: User) => {
+    const handleUserSelect = (user: BaseUser) => {
         // Check if user is already selected
         if (!selectedUsers.find(u => u.id === user.id)) {
             onUserSelect(user)
@@ -79,7 +75,7 @@ export function UserSearchCombobox({
         setSearchQuery("")
     }
 
-    const formatUserDisplay = (user: User) => {
+    const formatUserDisplay = (user: BaseUser) => {
         return `${user.firstName} ${user.lastName} (${user.email})`
     }
 

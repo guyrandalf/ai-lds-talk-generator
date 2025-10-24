@@ -8,30 +8,11 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { getReceivedSharedTalks, respondToSharedTalk } from "@/lib/actions/talks"
-
-interface ReceivedSharedTalk {
-    id: string
-    talk: {
-        id?: string
-        title: string
-        content: string
-        duration: number
-        meetingType: string
-    }
-    sharedBy: {
-        id: string
-        firstName: string
-        lastName: string
-        email: string
-    }
-    message?: string
-    status: string
-    createdAt: Date
-}
+import { ReceivedTalkDetails } from "@/lib/types/talks/sharing"
 
 
 function SharedTalksManager() {
-    const [sharedTalks, setSharedTalks] = React.useState<ReceivedSharedTalk[]>([])
+    const [sharedTalks, setSharedTalks] = React.useState<ReceivedTalkDetails[]>([])
     const [isLoading, setIsLoading] = React.useState(true)
     const [respondingTo, setRespondingTo] = React.useState<string | null>(null)
 

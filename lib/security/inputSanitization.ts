@@ -1,8 +1,5 @@
 'use server'
 
-import { z } from 'zod'
-
-// Enhanced input sanitization with comprehensive security measures
 
 /**
  * Comprehensive input sanitization configuration
@@ -292,7 +289,7 @@ export async function sanitizeFormData(
  * Validates and sanitizes JSON data
  */
 export async function sanitizeJSONData(
-    data: Record<string, any>,
+    data: Record<string, unknown>,
     fieldConfig: Record<string, {
         type: 'email' | 'password' | 'name' | 'topic' | 'personalStory' | 'url' | 'general'
         required?: boolean

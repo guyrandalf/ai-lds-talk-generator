@@ -6,7 +6,6 @@ import MobileNavigationDrawer from './MobileNavigationDrawer'
 import { useNavigation } from '@/hooks/useNavigation'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { BookOpen } from 'lucide-react'
 
 function Navigation() {
@@ -58,22 +57,7 @@ function Navigation() {
                     <div className="hidden md:flex items-center space-x-8">
                         {user ? (
                             <>
-                                <div className="flex items-center space-x-4">
-                                    <div className="text-sm text-gray-600">
-                                        Welcome back, <span className="font-medium text-gray-900">{user.firstName}</span>
-                                    </div>
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarFallback className="bg-blue-100 text-blue-600 text-sm font-medium">
-                                            {user.firstName.charAt(0).toUpperCase()}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                </div>
                                 <div className="flex items-center space-x-6">
-                                    <Button asChild className="shadow-sm hover:shadow-md bg-blue-600 hover:bg-blue-700">
-                                        <Link href="/questionnaire">
-                                            Create Talk
-                                        </Link>
-                                    </Button>
                                     <Button variant="ghost" asChild>
                                         <Link href="/dashboard" className="text-gray-700 hover:text-blue-600 font-medium">
                                             Dashboard

@@ -9,8 +9,13 @@ import { Mail, Lock, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { ButtonLoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { FormLoadingOverlay } from '@/components/ui/LoadingOverlay'
+import { BaseComponentProps, LoadingProps } from '@/lib/types/components/common'
+import { ErrorProps } from 'next/error'
 
-export default function LoginForm() {
+
+interface LoginFormProps extends BaseComponentProps, LoadingProps, ErrorProps { }
+
+export default function LoginForm({ }: LoginFormProps = {}) {
     const [error, setError] = useState<string>('')
     const [isLoading, setIsLoading] = useState(false)
     const router = useRouter()
@@ -24,10 +29,10 @@ export default function LoginForm() {
         try {
             const result = await loginUser(formData)
 
-            if (result.success && result.user) {
+            if (result.success && result.data) {
                 toast.success('Welcome back! You have been successfully signed in.')
                 // Immediately update the auth state with the returned user data for instant UI feedback
-                setUser(result.user)
+                setUser(result.data)
                 router.push('/dashboard')
             } else {
                 setError(result.error || 'Login failed')

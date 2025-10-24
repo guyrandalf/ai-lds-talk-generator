@@ -1,7 +1,8 @@
 'use client'
 
 import { useAsyncData } from '@/hooks/useAsyncData'
-import { getUserSavedTalks, GeneratedTalk } from '@/lib/actions/talks'
+import { getUserSavedTalks } from '@/lib/actions/talks'
+import { GeneratedTalk } from '@/lib/types/talks/generation'
 import TalksList from '@/components/TalksList'
 import { TalkListSkeleton } from '@/components/ui/SkeletonLoaders'
 import { toast } from 'sonner'
@@ -17,7 +18,7 @@ export default function AsyncTalksList({ initialTalks = [] }: AsyncTalksListProp
             if (!result.success) {
                 throw new Error(result.error || 'Failed to load talks')
             }
-            return result.talks || []
+            return result.data || []
         },
         [],
         {

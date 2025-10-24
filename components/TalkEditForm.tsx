@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { GeneratedTalk, updateSavedTalk } from '@/lib/actions/talks'
+import { updateSavedTalk } from '@/lib/actions/talks'
+import { GeneratedTalk, MeetingType } from '@/lib/types/talks/generation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,8 +12,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent } from '@/components/ui/card'
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { BaseComponentProps, LoadingProps } from '@/lib/types/components/common'
+import { ErrorProps } from 'next/error'
 
-interface TalkEditFormProps {
+
+interface TalkEditFormProps extends BaseComponentProps, LoadingProps, ErrorProps {
     talk: GeneratedTalk
 }
 
@@ -137,7 +141,7 @@ export default function TalkEditForm({ talk }: TalkEditFormProps) {
 
                         <div className="space-y-2">
                             <Label htmlFor="meetingType">Meeting Type</Label>
-                            <Select value={meetingType} onValueChange={setMeetingType}>
+                            <Select value={meetingType} onValueChange={(value) => setMeetingType(value as MeetingType)}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select meeting type" />
                                 </SelectTrigger>

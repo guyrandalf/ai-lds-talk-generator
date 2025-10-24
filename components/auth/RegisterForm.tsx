@@ -6,8 +6,13 @@ import Link from 'next/link'
 import { registerUser } from '@/lib/actions/auth'
 import { useAuth } from '@/hooks/useAuth'
 import { User, Mail, Lock, AlertCircle, Loader2, Info } from 'lucide-react'
+import { BaseComponentProps, LoadingProps } from '@/lib/types/components/common'
+import { ErrorProps } from 'next/error'
 
-export default function RegisterForm() {
+
+interface RegisterFormProps extends BaseComponentProps, LoadingProps, ErrorProps { }
+
+export default function RegisterForm({ }: RegisterFormProps = {}) {
     const [error, setError] = useState<string>('')
     const [isLoading, setIsLoading] = useState(false)
     const router = useRouter()
@@ -19,9 +24,9 @@ export default function RegisterForm() {
 
         const result = await registerUser(formData)
 
-        if (result.success && result.user) {
+        if (result.success && result.data) {
             // Immediately update the auth state with the returned user data for instant UI feedback
-            setUser(result.user)
+            setUser(result.data)
             router.push('/dashboard')
         } else {
             setError(result.error || 'Registration failed')

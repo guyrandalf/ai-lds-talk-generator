@@ -7,23 +7,11 @@ import { EnhancedButton } from '@/components/ui/EnhancedFormComponents'
 import CustomThemeInput from '@/components/CustomThemeInput'
 import AudienceContextSelector from '@/components/AudienceContextSelector'
 
-export interface TalkQuestionnaireData {
-    topic: string
-    duration: number
-    meetingType: 'sacrament' | 'stake_conference'
-    personalStory?: string
-    gospelLibraryLinks: string[]
-    audienceType?: string
-    speakerAge?: string
-    preferredThemes: string[]
-    customThemes: string[]
-    audienceContext?: string
-    specificScriptures?: string[]
-}
+import type { TalkQuestionnaire } from '@/lib/types/talks/generation'
+import { BaseComponentProps, LoadingProps } from '@/lib/types/components/common'
 
-interface TalkQuestionnaireProps {
-    onSubmit: (data: TalkQuestionnaireData) => void
-    isLoading?: boolean
+interface TalkQuestionnaireProps extends BaseComponentProps, LoadingProps {
+    onSubmit: (data: TalkQuestionnaire) => void
     initialTopic?: string
     progress?: number
     stage?: 'processing' | 'generating' | 'validating' | 'complete'
@@ -36,7 +24,7 @@ export default function TalkQuestionnaire({
     progress = 0,
     stage = 'processing'
 }: TalkQuestionnaireProps) {
-    const [formData, setFormData] = useState<TalkQuestionnaireData>({
+    const [formData, setFormData] = useState<TalkQuestionnaire>({
         topic: initialTopic,
         duration: 15,
         meetingType: 'sacrament',
@@ -110,7 +98,7 @@ export default function TalkQuestionnaire({
         'Love'
     ]
 
-    const handleInputChange = (field: keyof TalkQuestionnaireData, value: string | number | string[]) => {
+    const handleInputChange = (field: keyof TalkQuestionnaire, value: string | number | string[]) => {
         setFormData(prev => ({
             ...prev,
             [field]: value

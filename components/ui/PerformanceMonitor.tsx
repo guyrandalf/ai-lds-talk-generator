@@ -67,6 +67,7 @@ export function usePerformanceMonitor() {
         // Measure after page load
         if (document.readyState === 'complete') {
             measurePerformance()
+            return undefined
         } else {
             window.addEventListener('load', measurePerformance)
             return () => window.removeEventListener('load', measurePerformance)

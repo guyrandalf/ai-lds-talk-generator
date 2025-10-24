@@ -4,11 +4,7 @@ import { useAsyncData } from '@/hooks/useAsyncData'
 import { getUserSavedTalks } from '@/lib/actions/talks'
 import { DashboardStatsSkeleton } from '@/components/ui/SkeletonLoaders'
 import { toast } from 'sonner'
-
-interface UserStats {
-    totalTalks: number
-    availableForExport: number
-}
+import { UserStats } from '@/lib/types/components/common'
 
 export default function AsyncUserStats() {
     const { data: stats, isLoading, error } = useAsyncData(
@@ -18,7 +14,7 @@ export default function AsyncUserStats() {
                 throw new Error(result.error || 'Failed to load user stats')
             }
 
-            const talks = result.talks || []
+            const talks = result.data || []
             return {
                 totalTalks: talks.length,
                 availableForExport: talks.length // All saved talks are available for export

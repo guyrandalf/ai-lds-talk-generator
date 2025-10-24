@@ -5,6 +5,10 @@ import { validateTalkContent } from './validation'
 import { getSession } from './auth'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, UnderlineType } from 'docx'
 import { sanitizeFormData } from '../security/inputSanitization'
+import { ApiResponse, ValidationResponse } from '../types/api/responses'
+import { ProcessedQuestionnaireResult, TalkQuestionnaire, GeneratedTalk, ChurchSource, MeetingType, TalkPreferences, DatabaseTalk } from '../types/talks/generation'
+import { ReceivedTalkDetails, ShareStatus, SharedTalkDetails } from '../types/talks/sharing'
+
 
 // XAI API Configuration
 const XAI_MAX_RETRIES = 3
@@ -15,75 +19,11 @@ interface XAIMessage {
   content: string
 }
 
-// Types for talk questionnaire
-export interface TalkQuestionnaireData {
-  topic: string
-  duration: number
-  meetingType: 'sacrament' | 'stake_conference'
-  personalStory?: string
-  gospelLibraryLinks: string[]
-  audienceType?: string
-  speakerAge?: string
-  preferredThemes: string[]
-  customThemes: string[]
-  audienceContext?: string
-  specificScriptures?: string[]
-}
+// Use TalkQuestionnaire from centralized types (imported above)
 
-// Types for generated talk
-export interface GeneratedTalk {
-  id?: string
-  title: string
-  content: string
-  duration: number
-  meetingType: string
-  sources: ChurchSource[]
-  questionnaire: TalkQuestionnaireData
-  createdAt?: Date
-}
+// Use GeneratedTalk, ChurchSource, TalkPreferences, and ProcessedQuestionnaireResult from centralized types (imported above)
 
-export interface ChurchSource {
-  title: string
-  url: string
-  type: 'scripture' | 'conference_talk' | 'manual' | 'article'
-}
-
-export interface TalkPreferences {
-  audienceType?: string
-  preferredThemes?: string[]
-  specificScriptures?: string[]
-}
-
-export interface ProcessedQuestionnaireResult {
-  success: boolean
-  error?: string
-  data?: {
-    questionnaire: TalkQuestionnaireData
-    userId?: string
-    sessionId: string
-  }
-}
-
-export interface SharedTalk {
-  id: string
-  talk: {
-    id?: string
-    title: string
-    content: string
-    duration: number
-    meetingType: string
-  }
-  sharedWith: {
-    id: string
-    firstName: string
-    lastName: string
-    email: string
-  }
-  message?: string
-  status: string
-  createdAt: Date
-  respondedAt?: Date
-}
+// Use SharedTalkDetails from centralized types (imported above)
 
 // Validation schema for questionnaire
 const questionnaireSchema = z.object({
@@ -105,7 +45,7 @@ const questionnaireSchema = z.object({
 /**
  * Processes and validates questionnaire data from the form
  */
-export async function processQuestionnaire(formData: FormData): Promise<ProcessedQuestionnaireResult> {
+export async function processQuestionnaire(formData: FormData): Promise<ApiResponse<ProcessedQuestionnaireResult['data']>> {
   try {
 
 
@@ -165,7 +105,7 @@ export async function processQuestionnaire(formData: FormData): Promise<Processe
     const session = await getSession()
 
     // Create processed questionnaire data
-    const processedData: TalkQuestionnaireData = {
+    const processedData: TalkQuestionnaire = {
       topic: contentValidation.validatedContent!.topic,
       duration: validatedData.duration,
       meetingType: validatedData.meetingType,
@@ -208,7 +148,7 @@ export async function processQuestionnaire(formData: FormData): Promise<Processe
 /**
  * Processes questionnaire data from JavaScript object (for client-side forms)
  */
-export async function processQuestionnaireData(data: TalkQuestionnaireData): Promise<ProcessedQuestionnaireResult> {
+export async function processQuestionnaireData(data: TalkQuestionnaire): Promise<ApiResponse<ProcessedQuestionnaireResult['data']>> {
   try {
     // Basic schema validation
     const validatedData = questionnaireSchema.parse(data)
@@ -234,7 +174,7 @@ export async function processQuestionnaireData(data: TalkQuestionnaireData): Pro
     const session = await getSession()
 
     // Create processed questionnaire data
-    const processedData: TalkQuestionnaireData = {
+    const processedData: TalkQuestionnaire = {
       topic: contentValidation.validatedContent!.topic,
       duration: validatedData.duration,
       meetingType: validatedData.meetingType,
@@ -280,9 +220,9 @@ export async function processQuestionnaireData(data: TalkQuestionnaireData): Pro
  */
 export async function storeQuestionnaireForGeneration(
   sessionId: string,
-  questionnaire: TalkQuestionnaireData,
+  questionnaire: TalkQuestionnaire,
   userId?: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ApiResponse<void>> {
   try {
     // In a real implementation, you might store this in:
     // 1. Redis for temporary storage
@@ -329,15 +269,11 @@ export async function storeQuestionnaireForGeneration(
 /**
  * Retrieves stored questionnaire data for talk generation
  */
-export async function getStoredQuestionnaire(sessionId: string): Promise<{
-  success: boolean
-  data?: {
-    questionnaire: TalkQuestionnaireData
-    userId?: string
-    timestamp: number
-  }
-  error?: string
-}> {
+export async function getStoredQuestionnaire(sessionId: string): Promise<ApiResponse<{
+  questionnaire: TalkQuestionnaire
+  userId?: string
+  timestamp: number
+}>> {
   try {
     // In a real implementation, retrieve from your storage system
     // For now, we'll return a placeholder response
@@ -368,11 +304,7 @@ export async function getStoredQuestionnaire(sessionId: string): Promise<{
 /**
  * Validates questionnaire completeness for talk generation
  */
-export async function validateQuestionnaireForGeneration(questionnaire: TalkQuestionnaireData): Promise<{
-  success: boolean
-  errors: string[]
-  warnings: string[]
-}> {
+export async function validateQuestionnaireForGeneration(questionnaire: TalkQuestionnaire): Promise<ValidationResponse> {
   const errors: string[] = []
   const warnings: string[] = []
 
@@ -413,7 +345,7 @@ export async function validateQuestionnaireForGeneration(questionnaire: TalkQues
 
   return {
     success: errors.length === 0,
-    errors,
+    error: errors.length > 0 ? errors.join('; ') : undefined,
     warnings
   }
 }
@@ -579,18 +511,14 @@ async function makeXAIRequest(
 /**
  * Formats questionnaire data for AI prompt generation with structured prompts
  */
-export async function formatQuestionnaireForAI(questionnaire: TalkQuestionnaireData): Promise<{
-  success: boolean
-  formattedPrompt?: string
-  error?: string
-}> {
+export async function formatQuestionnaireForAI(questionnaire: TalkQuestionnaire): Promise<ApiResponse<string>> {
   try {
     const validation = await validateQuestionnaireForGeneration(questionnaire)
 
     if (!validation.success) {
       return {
         success: false,
-        error: `Questionnaire validation failed: ${validation.errors.join(', ')}`
+        error: `Questionnaire validation failed: ${validation.error || 'Unknown validation error'}`
       }
     }
 
@@ -689,7 +617,7 @@ Since no specific personal story was provided, please:
     // Gospel Library references
     if (questionnaire.gospelLibraryLinks.length > 0) {
       promptSections.push(`GOSPEL LIBRARY REFERENCES TO INCLUDE:
-${questionnaire.gospelLibraryLinks.map(link => `- ${link}`).join('\n')}
+${questionnaire.gospelLibraryLinks.map((link: string) => `- ${link}`).join('\n')}
 
 Please reference and quote from these sources, ensuring they support your main points.`)
     }
@@ -697,7 +625,7 @@ Please reference and quote from these sources, ensuring they support your main p
     // Specific scriptures
     if (questionnaire.specificScriptures && questionnaire.specificScriptures.length > 0) {
       promptSections.push(`SCRIPTURES TO REFERENCE:
-${questionnaire.specificScriptures.map(scripture => `- ${scripture}`).join('\n')}
+${questionnaire.specificScriptures.map((scripture: string) => `- ${scripture}`).join('\n')}
 
 Include these scriptures with context and application to the topic.`)
     }
@@ -803,7 +731,7 @@ Please provide a clear title for the talk, followed by the complete talk content
 
     return {
       success: true,
-      formattedPrompt
+      data: formattedPrompt
     }
   } catch (error) {
     console.error('Failed to format questionnaire for AI:', error)
@@ -817,13 +745,7 @@ Please provide a clear title for the talk, followed by the complete talk content
 
  * Generates a talk using XAI API based on questionnaire data
  */
-export async function generateTalk(questionnaire: TalkQuestionnaireData): Promise<{
-  success: boolean
-  talk?: GeneratedTalk
-  error?: string
-  warnings?: string[]
-  violations?: unknown[]
-}> {
+export async function generateTalk(questionnaire: TalkQuestionnaire): Promise<ApiResponse<GeneratedTalk> & { violations?: unknown[] }> {
   try {
     console.log('Starting talk generation for topic:', questionnaire.topic)
 
@@ -838,7 +760,7 @@ export async function generateTalk(questionnaire: TalkQuestionnaireData): Promis
     if (!validation.success) {
       return {
         success: false,
-        error: `Questionnaire validation failed: ${validation.errors.join(', ')}`,
+        error: `Questionnaire validation failed: ${validation.error || 'Unknown validation error'}`,
         warnings: validation.warnings
       }
     }
@@ -914,7 +836,7 @@ Provide the talk content in a clear, readable format with proper paragraphs and 
     // Create user message with the formatted prompt
     const userMessage: XAIMessage = {
       role: 'user',
-      content: promptResult.formattedPrompt!
+      content: promptResult.data!
     }
 
     // Make request to XAI API
@@ -1000,7 +922,7 @@ Provide the talk content in a clear, readable format with proper paragraphs and 
 
     return {
       success: true,
-      talk: generatedTalk,
+      data: generatedTalk,
       warnings: [...(validation.warnings || []), ...(contentValidation.warnings || [])]
     }
   } catch (error) {
@@ -1511,8 +1433,8 @@ export async function exportTalkToWord(talk: GeneratedTalk): Promise<{
     // Talk content
     const contentParagraphs = talk.content
       .split('\n')
-      .map(p => p.trim())
-      .filter(p => p.length > 0)
+      .map((p: string) => p.trim())
+      .filter((p: string) => p.length > 0)
 
     for (const paragraph of contentParagraphs) {
       children.push(
@@ -1688,11 +1610,7 @@ export async function handleTalkExport(talkData: GeneratedTalk): Promise<{
 /**
  * Saves a generated talk to the database for authenticated users
  */
-export async function saveTalkToDatabase(talk: GeneratedTalk): Promise<{
-  success: boolean
-  talkId?: string
-  error?: string
-}> {
+export async function saveTalkToDatabase(talk: GeneratedTalk): Promise<ApiResponse<{ talkId: string }>> {
   try {
     // Get current user session
     const session = await getSession()
@@ -1746,7 +1664,7 @@ export async function saveTalkToDatabase(talk: GeneratedTalk): Promise<{
 
       return {
         success: true,
-        talkId: savedTalk.id
+        data: { talkId: savedTalk.id }
       }
     } finally {
       await prisma.$disconnect()
@@ -1763,11 +1681,7 @@ export async function saveTalkToDatabase(talk: GeneratedTalk): Promise<{
 /**
  * Retrieves saved talks for the current authenticated user
  */
-export async function getUserSavedTalks(): Promise<{
-  success: boolean
-  talks?: GeneratedTalk[]
-  error?: string
-}> {
+export async function getUserSavedTalks(): Promise<ApiResponse<GeneratedTalk[]>> {
   try {
     // Get current user session
     const session = await getSession()
@@ -1786,7 +1700,7 @@ export async function getUserSavedTalks(): Promise<{
     if (cachedTalks) {
       return {
         success: true,
-        talks: cachedTalks as GeneratedTalk[]
+        data: cachedTalks as GeneratedTalk[]
       }
     }
 
@@ -1806,12 +1720,12 @@ export async function getUserSavedTalks(): Promise<{
       })
 
       // Convert database records to GeneratedTalk format
-      const talks: GeneratedTalk[] = savedTalks.map(talk => ({
+      const talks: GeneratedTalk[] = savedTalks.map((talk) => ({
         id: talk.id,
         title: talk.title,
         content: talk.content,
         duration: talk.duration,
-        meetingType: talk.meetingType,
+        meetingType: talk.meetingType as MeetingType,
         sources: [], // Sources would need to be extracted from content or stored separately
         questionnaire: {
           topic: talk.topic || '',
@@ -1821,8 +1735,8 @@ export async function getUserSavedTalks(): Promise<{
           gospelLibraryLinks: talk.gospelLibraryLinks,
           audienceType: (talk.preferences as TalkPreferences)?.audienceType,
           preferredThemes: (talk.preferences as TalkPreferences)?.preferredThemes || [],
-          customThemes: (talk as any).customThemes || [],
-          audienceContext: (talk as any).audienceContext || undefined,
+          customThemes: talk.customThemes || [],
+          audienceContext: talk.audienceContext || undefined,
           specificScriptures: (talk.preferences as TalkPreferences)?.specificScriptures || []
         },
         createdAt: talk.createdAt
@@ -1833,7 +1747,7 @@ export async function getUserSavedTalks(): Promise<{
 
       return {
         success: true,
-        talks
+        data: talks
       }
     } finally {
       await prisma.$disconnect()
@@ -1850,10 +1764,7 @@ export async function getUserSavedTalks(): Promise<{
 /**
  * Deletes a saved talk for the current authenticated user
  */
-export async function deleteSavedTalk(talkId: string): Promise<{
-  success: boolean
-  error?: string
-}> {
+export async function deleteSavedTalk(talkId: string): Promise<ApiResponse<void>> {
   try {
     // Get current user session
     const session = await getSession()
@@ -1916,10 +1827,7 @@ export async function deleteSavedTalk(talkId: string): Promise<{
 /**
  * Updates a saved talk for the current authenticated user
  */
-export async function updateSavedTalk(talkId: string, updates: Partial<GeneratedTalk>): Promise<{
-  success: boolean
-  error?: string
-}> {
+export async function updateSavedTalk(talkId: string, updates: Partial<GeneratedTalk>): Promise<ApiResponse<void>> {
   try {
     // Get current user session
     const session = await getSession()
@@ -2011,11 +1919,7 @@ export async function updateSavedTalk(talkId: string, updates: Partial<Generated
 /**
  * Gets a specific saved talk by ID for the current authenticated user
  */
-export async function getSavedTalkById(talkId: string): Promise<{
-  success: boolean
-  talk?: GeneratedTalk
-  error?: string
-}> {
+export async function getSavedTalkById(talkId: string): Promise<ApiResponse<GeneratedTalk>> {
   try {
     // Get current user session
     const session = await getSession()
@@ -2061,18 +1965,18 @@ export async function getSavedTalkById(talkId: string): Promise<{
         title: savedTalk.title,
         content: savedTalk.content,
         duration: savedTalk.duration,
-        meetingType: savedTalk.meetingType,
+        meetingType: savedTalk.meetingType as MeetingType,
         sources: [], // Sources would need to be extracted from content or stored separately
         questionnaire: {
           topic: savedTalk.topic || '',
           duration: savedTalk.duration,
-          meetingType: savedTalk.meetingType as 'sacrament' | 'stake_conference',
+          meetingType: savedTalk.meetingType as MeetingType,
           personalStory: savedTalk.personalStory || undefined,
           gospelLibraryLinks: savedTalk.gospelLibraryLinks,
           audienceType: (savedTalk.preferences as TalkPreferences)?.audienceType,
           preferredThemes: (savedTalk.preferences as TalkPreferences)?.preferredThemes || [],
-          customThemes: (savedTalk as any).customThemes || [],
-          audienceContext: (savedTalk as any).audienceContext || undefined,
+          customThemes: (savedTalk as DatabaseTalk).customThemes || [],
+          audienceContext: (savedTalk as DatabaseTalk).audienceContext || undefined,
           specificScriptures: (savedTalk.preferences as TalkPreferences)?.specificScriptures || []
         },
         createdAt: savedTalk.createdAt
@@ -2080,7 +1984,7 @@ export async function getSavedTalkById(talkId: string): Promise<{
 
       return {
         success: true,
-        talk
+        data: talk
       }
     } finally {
       await prisma.$disconnect()
@@ -2220,19 +2124,7 @@ export async function shareTalk(
  */
 export async function getReceivedSharedTalks(): Promise<{
   success: boolean
-  shares?: Array<{
-    id: string
-    talk: GeneratedTalk
-    sharedBy: {
-      id: string
-      firstName: string
-      lastName: string
-      email: string
-    }
-    message?: string
-    status: string
-    createdAt: Date
-  }>
+  shares?: ReceivedTalkDetails[]
   error?: string
 }> {
   try {
@@ -2285,20 +2177,20 @@ export async function getReceivedSharedTalks(): Promise<{
           questionnaire: {
             topic: share.talk.topic || '',
             duration: share.talk.duration,
-            meetingType: share.talk.meetingType as 'sacrament' | 'stake_conference',
+            meetingType: share.talk.meetingType as MeetingType,
             personalStory: share.talk.personalStory || undefined,
             gospelLibraryLinks: share.talk.gospelLibraryLinks,
             audienceType: (share.talk.preferences as TalkPreferences)?.audienceType,
             preferredThemes: (share.talk.preferences as TalkPreferences)?.preferredThemes || [],
-            customThemes: (share.talk as any).customThemes || [],
-            audienceContext: (share.talk as any).audienceContext || undefined,
+            customThemes: (share.talk as DatabaseTalk).customThemes || [],
+            audienceContext: (share.talk as DatabaseTalk).audienceContext || undefined,
             specificScriptures: (share.talk.preferences as TalkPreferences)?.specificScriptures || []
           },
           createdAt: share.talk.createdAt
         } as GeneratedTalk,
         sharedBy: share.sharedBy,
         message: share.message || undefined,
-        status: share.status,
+        status: share.status as ShareStatus,
         createdAt: share.createdAt
       }))
 
@@ -2323,20 +2215,7 @@ export async function getReceivedSharedTalks(): Promise<{
  */
 export async function getSharedTalksByUser(): Promise<{
   success: boolean
-  shares?: Array<{
-    id: string
-    talk: GeneratedTalk
-    sharedWith: {
-      id: string
-      firstName: string
-      lastName: string
-      email: string
-    }
-    message?: string
-    status: string
-    createdAt: Date
-    respondedAt?: Date
-  }>
+  shares?: SharedTalkDetails[]
   error?: string
 }> {
   try {
@@ -2389,20 +2268,20 @@ export async function getSharedTalksByUser(): Promise<{
           questionnaire: {
             topic: share.talk.topic || '',
             duration: share.talk.duration,
-            meetingType: share.talk.meetingType as 'sacrament' | 'stake_conference',
+            meetingType: share.talk.meetingType as MeetingType,
             personalStory: share.talk.personalStory || undefined,
             gospelLibraryLinks: share.talk.gospelLibraryLinks,
             audienceType: (share.talk.preferences as TalkPreferences)?.audienceType,
             preferredThemes: (share.talk.preferences as TalkPreferences)?.preferredThemes || [],
-            customThemes: (share.talk as any).customThemes || [],
-            audienceContext: (share.talk as any).audienceContext || undefined,
+            customThemes: (share.talk as DatabaseTalk).customThemes || [],
+            audienceContext: (share.talk as DatabaseTalk).audienceContext || undefined,
             specificScriptures: (share.talk.preferences as TalkPreferences)?.specificScriptures || []
           },
           createdAt: share.talk.createdAt
         } as GeneratedTalk,
         sharedWith: share.sharedWith,
         message: share.message || undefined,
-        status: share.status,
+        status: share.status as ShareStatus,
         createdAt: share.createdAt,
         respondedAt: share.respondedAt || undefined
       }))
@@ -2496,9 +2375,9 @@ export async function respondToSharedTalk(
               topic: share.talk.topic,
               personalStory: share.talk.personalStory,
               gospelLibraryLinks: share.talk.gospelLibraryLinks,
-              audienceContext: (share.talk as any).audienceContext,
-              customThemes: (share.talk as any).customThemes || [],
-              preferences: share.talk.preferences as any,
+              audienceContext: (share.talk as DatabaseTalk).audienceContext,
+              customThemes: (share.talk as DatabaseTalk).customThemes || [],
+              preferences: share.talk.preferences || undefined,
               userId: session.userId
             }
           })

@@ -17,7 +17,7 @@ interface UseAsyncDataOptions<T> {
 
 export function useAsyncData<T>(
     asyncFunction: () => Promise<T>,
-    dependencies: any[] = [],
+    dependencies: unknown[] = [],
     options: UseAsyncDataOptions<T> = {}
 ): AsyncDataState<T> {
     const [data, setData] = useState<T | null>(options.initialData || null)

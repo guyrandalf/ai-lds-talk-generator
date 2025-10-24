@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { GeneratedTalk } from '@/lib/types/talks/generation'
 
 export interface NavigationGuardState {
     hasUnsavedChanges: boolean
@@ -17,6 +18,8 @@ export interface NavigationGuardActions {
     confirmNavigation: () => void
     cancelNavigation: () => void
     resetGuard: () => void
+    shouldBlockNavigation: (url?: string) => boolean
+    handleNavigationAttempt: (url: string) => boolean
 }
 
 export interface UseNavigationGuardOptions {
@@ -44,10 +47,12 @@ export function useNavigationGuard(options: UseNavigationGuardOptions = {}) {
         pendingNavigation: null
     })
 
-    // Track if we're in the middle of a confirmed navigation
-    const isNavigatingRef = useRef(false)
-    const originalPushRef = useRef<typeof router.push | null>(null)
-    const originalReplaceRef = useRef<typeof router.replace | null>(null)
+    // Keep state ref updated
+    useEffect(() => {
+        stateRef.current = state
+    }, [state])
+
+    const stateRef = useRef(state)
 
     const setUnsavedChanges = useCallback((hasChanges: boolean) => {
         setState(prev => ({
@@ -73,7 +78,7 @@ export function useNavigationGuard(options: UseNavigationGuardOptions = {}) {
     }, [])
 
     const confirmNavigation = useCallback(() => {
-        const { pendingNavigation } = state
+        const { pendingNavigation } = stateRef.current
 
         // Reset state first
         setState(prev => ({
@@ -85,10 +90,35 @@ export function useNavigationGuard(options: UseNavigationGuardOptions = {}) {
 
         // Perform the navigation if there was a pending one
         if (pendingNavigation) {
-            isNavigatingRef.current = true
             router.push(pendingNavigation)
         }
-    }, [state, router])
+    }, [router])
+
+    // Helper function to check if navigation should be blocked
+    const shouldBlockNavigation = useCallback((url?: string) => {
+        if (!enabled || !stateRef.current.hasUnsavedChanges) {
+            return false
+        }
+
+        if (onNavigationAttempt) {
+            return !onNavigationAttempt(url || '')
+        }
+
+        return true
+    }, [enabled, onNavigationAttempt])
+
+    // Helper function to handle navigation attempt
+    const handleNavigationAttempt = useCallback((url: string) => {
+        if (shouldBlockNavigation(url)) {
+            setState(prev => ({
+                ...prev,
+                showWarning: true,
+                pendingNavigation: url
+            }))
+            return false
+        }
+        return true
+    }, [shouldBlockNavigation])
 
     const cancelNavigation = useCallback(() => {
         hideUnsavedWarning()
@@ -108,16 +138,10 @@ export function useNavigationGuard(options: UseNavigationGuardOptions = {}) {
         if (!enabled) return
 
         const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-            // Skip if we're in a confirmed navigation
-            if (isNavigatingRef.current) {
-                isNavigatingRef.current = false
-                return
-            }
-
-            if (state.hasUnsavedChanges) {
+            if (stateRef.current.hasUnsavedChanges) {
                 // Call custom handler if provided
                 if (onBeforeUnload && !onBeforeUnload()) {
-                    return
+                    return undefined
                 }
 
                 // Standard browser warning
@@ -125,6 +149,8 @@ export function useNavigationGuard(options: UseNavigationGuardOptions = {}) {
                 event.returnValue = warningMessage
                 return warningMessage
             }
+
+            return undefined
         }
 
         window.addEventListener('beforeunload', handleBeforeUnload)
@@ -132,110 +158,60 @@ export function useNavigationGuard(options: UseNavigationGuardOptions = {}) {
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload)
         }
-    }, [enabled, state.hasUnsavedChanges, warningMessage, onBeforeUnload])
+    }, [enabled, warningMessage, onBeforeUnload])
 
-    // Intercept router navigation
+    // Handle browser navigation (back/forward)
     useEffect(() => {
         if (!enabled) return
 
-        // Store original router methods
-        if (!originalPushRef.current) {
-            originalPushRef.current = router.push
-            originalReplaceRef.current = router.replace
-        }
-
-        // Override router.push
-        router.push = (href: string, options?: any) => {
-            // Skip if we're in a confirmed navigation
-            if (isNavigatingRef.current) {
-                isNavigatingRef.current = false
-                return originalPushRef.current!(href, options)
-            }
-
-            if (state.hasUnsavedChanges) {
-                // Call custom handler if provided
-                if (onNavigationAttempt && !onNavigationAttempt(href)) {
-                    return Promise.resolve(true)
+        const handlePopState = () => {
+            if (stateRef.current.hasUnsavedChanges) {
+                // Show warning for browser navigation
+                const shouldLeave = window.confirm(warningMessage)
+                if (!shouldLeave) {
+                    // Push current state back to prevent navigation
+                    window.history.pushState(null, '', window.location.href)
                 }
-
-                // Show warning dialog
-                setState(prev => ({
-                    ...prev,
-                    showWarning: true,
-                    pendingNavigation: href
-                }))
-                return Promise.resolve(true)
             }
-
-            return originalPushRef.current!(href, options)
         }
 
-        // Override router.replace
-        router.replace = (href: string, options?: any) => {
-            // Skip if we're in a confirmed navigation
-            if (isNavigatingRef.current) {
-                isNavigatingRef.current = false
-                return originalReplaceRef.current!(href, options)
-            }
+        window.addEventListener('popstate', handlePopState)
 
-            if (state.hasUnsavedChanges) {
-                // Call custom handler if provided
-                if (onNavigationAttempt && !onNavigationAttempt(href)) {
-                    return Promise.resolve(true)
-                }
-
-                // Show warning dialog
-                setState(prev => ({
-                    ...prev,
-                    showWarning: true,
-                    pendingNavigation: href
-                }))
-                return Promise.resolve(true)
-            }
-
-            return originalReplaceRef.current!(href, options)
-        }
-
-        // Cleanup function to restore original methods
         return () => {
-            if (originalPushRef.current) {
-                router.push = originalPushRef.current
-            }
-            if (originalReplaceRef.current) {
-                router.replace = originalReplaceRef.current
-            }
+            window.removeEventListener('popstate', handlePopState)
         }
-    }, [enabled, state.hasUnsavedChanges, state.showWarning, router, onNavigationAttempt])
+    }, [enabled, warningMessage])
 
-    return {
+    // Handle navigation interception using popstate and beforeunload only
+    // Router method interception is too fragile and causes conflicts
+
+    return useMemo(() => ({
         ...state,
         setUnsavedChanges,
         showUnsavedWarning,
         hideUnsavedWarning,
         confirmNavigation,
         cancelNavigation,
-        resetGuard
-    }
+        resetGuard,
+        shouldBlockNavigation,
+        handleNavigationAttempt
+    }), [state, setUnsavedChanges, showUnsavedWarning, hideUnsavedWarning, confirmNavigation, cancelNavigation, resetGuard, shouldBlockNavigation, handleNavigationAttempt])
 }
 
 // Specialized hook for talk editing with auto-save detection
-export function useTalkNavigationGuard(talk?: any, originalTalk?: any) {
-    const [hasChanges, setHasChanges] = useState(false)
-
-    // Detect changes by comparing current talk with original
-    useEffect(() => {
+export function useTalkNavigationGuard(talk?: GeneratedTalk, originalTalk?: GeneratedTalk) {
+    // Derive changes state directly from props using useMemo
+    const hasChanges = useMemo(() => {
         if (!talk || !originalTalk) {
-            setHasChanges(false)
-            return
+            return false
         }
 
-        const hasUnsavedChanges =
+        return (
             talk.title !== originalTalk.title ||
             talk.content !== originalTalk.content ||
             talk.duration !== originalTalk.duration ||
             talk.meetingType !== originalTalk.meetingType
-
-        setHasChanges(hasUnsavedChanges)
+        )
     }, [talk, originalTalk])
 
     const navigationGuard = useNavigationGuard({
@@ -254,13 +230,12 @@ export function useTalkNavigationGuard(talk?: any, originalTalk?: any) {
     // Sync changes with navigation guard
     useEffect(() => {
         navigationGuard.setUnsavedChanges(hasChanges)
-    }, [hasChanges, navigationGuard])
+    }, [hasChanges, navigationGuard.setUnsavedChanges])
 
-    return {
+    return useMemo(() => ({
         ...navigationGuard,
-        hasUnsavedChanges: hasChanges,
-        setHasChanges
-    }
+        hasUnsavedChanges: hasChanges
+    }), [navigationGuard, hasChanges])
 }
 
 // Hook for form-based navigation guards
@@ -273,7 +248,7 @@ export function useFormNavigationGuard(isDirty: boolean = false, customMessage?:
     // Sync form dirty state with navigation guard
     useEffect(() => {
         navigationGuard.setUnsavedChanges(isDirty)
-    }, [isDirty, navigationGuard])
+    }, [isDirty, navigationGuard, navigationGuard.setUnsavedChanges])
 
     return navigationGuard
 }

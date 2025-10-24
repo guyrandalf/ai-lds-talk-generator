@@ -1,10 +1,10 @@
 'use client'
 
+import { BaseComponentProps, ComponentSize } from '@/lib/types/components/common'
 import { Loader2 } from 'lucide-react'
 
-interface LoadingSpinnerProps {
-    size?: 'sm' | 'md' | 'lg' | 'xl'
-    className?: string
+interface LoadingSpinnerProps extends BaseComponentProps {
+    size?: ComponentSize
     text?: string
 }
 

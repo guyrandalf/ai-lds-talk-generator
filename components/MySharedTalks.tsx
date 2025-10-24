@@ -7,12 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { toast } from "sonner"
-import { getSharedTalksByUser, SharedTalk } from "@/lib/actions/talks"
+import { getSharedTalksByUser } from "@/lib/actions/talks"
+import { SharedTalkDetails } from "@/lib/types/talks/sharing"
 
 
 
 function MySharedTalks() {
-    const [sharedTalks, setSharedTalks] = React.useState<SharedTalk[]>([])
+    const [sharedTalks, setSharedTalks] = React.useState<SharedTalkDetails[]>([])
     const [isLoading, setIsLoading] = React.useState(true)
 
     // Load shared talks on component mount
@@ -62,7 +63,7 @@ function MySharedTalks() {
     }
 
     const groupedShares = React.useMemo(() => {
-        const groups: { [talkId: string]: SharedTalk[] } = {}
+        const groups: { [talkId: string]: SharedTalkDetails[] } = {}
 
         sharedTalks.forEach(share => {
             const talkId = share.talk.id || share.id // fallback to share.id if talk.id is undefined

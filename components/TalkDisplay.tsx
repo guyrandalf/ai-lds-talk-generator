@@ -1,17 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { GeneratedTalk, ChurchSource } from '@/lib/actions/talks'
+import { GeneratedTalk, ChurchSource } from '@/lib/types/talks/generation'
+import { BaseComponentProps, FileActionProps, AuthContextProps } from '@/lib/types/components/common'
 
-interface TalkDisplayProps {
+
+interface TalkDisplayProps extends BaseComponentProps, FileActionProps, AuthContextProps {
     talk: GeneratedTalk
-    onExport?: () => void
-    onSave?: () => void
-    onEdit?: () => void
-    isAuthenticated?: boolean
-    isExporting?: boolean
-    isSaving?: boolean
-    className?: string
 }
 
 export default function TalkDisplay({
