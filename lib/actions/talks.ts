@@ -29,28 +29,35 @@ interface XAIMessage {
 const questionnaireSchema = z.object({
     topic: z.string().min(1, 'Topic is required').max(200, 'Topic is too long'),
     duration: z.number().min(5, 'Duration must be at least 5 minutes').max(60, 'Duration cannot exceed 60 minutes'),
-    meetingType: z.enum(['sacrament', 'stake_conference', 'devotional'], {
+    meetingType: z.enum([
+        'sacrament', 'stake_conference', 'ward_conference', 'area_devotional',
+        'ysa_devotional', 'youth_fireside', 'mission_conference', 'senior_devotional',
+        'general_fireside', 'sunday_school', 'priesthood_relief_society', 'primary', 'young_men_women'
+    ], {
         message: 'Please select a valid meeting type'
     }),
     personalStory: z.string().min(1, 'Personal story is required to show your preparation and build testimony').max(5000, 'Personal story is too long'),
-    gospelLibraryLinks: z.array(z.string()).refine(
+    gospelLibraryLinks: z.array(z.string()).min(1, 'At least one Gospel Library link is required').refine(
         (links) => links.every(link => !link.trim() || link.startsWith('https://www.churchofjesuschrist.org/')),
         { message: 'All Gospel Library links must be from https://www.churchofjesuschrist.org/' }
-    ).default([]),
-    audienceType: z.string().optional(),
+    ),
+    audienceType: z.string().min(1, 'Audience type is required'),
     speakerAge: z.string().min(1, 'Speaker age range is required'),
-    preferredThemes: z.array(z.string()).default([]),
+    preferredThemes: z.array(z.string()).min(1, 'At least one theme is required'),
     customThemes: z.array(z.string()).default([]),
-    audienceContext: z.string().optional(),
-    specificScriptures: z.array(z.string()).default([])
+    audienceContext: z.string().min(1, 'Audience context is required'),
+    specificScriptures: z.array(z.string()).min(1, 'At least one scripture reference is required').refine(
+        (scriptures) => scriptures.every(scripture => scripture.trim().length > 0),
+        { message: 'All scripture references must be filled in' }
+    )
 }).refine(
     (data) => {
         const validLinks = data.gospelLibraryLinks.filter(link => link.trim())
         const validScriptures = data.specificScriptures.filter(scripture => scripture.trim())
-        return validLinks.length > 0 || validScriptures.length > 0
+        return validLinks.length > 0 && validScriptures.length > 0
     },
     {
-        message: 'At least one Gospel Library link or scripture reference is required',
+        message: 'Both Gospel Library links and scripture references are required',
         path: ['gospelLibraryLinks']
     }
 )
@@ -535,17 +542,24 @@ export async function formatQuestionnaireForAI(questionnaire: TalkQuestionnaire)
             }
         }
 
-        // Calculate approximate word count for the duration (average 110 words per minute for talks)
-        const targetWordCount = Math.round(questionnaire.duration * 110)
+        // Calculate approximate word count for the duration (average 130 words per minute for talks to ensure full duration)
+        const targetWordCount = Math.round(questionnaire.duration * 130)
 
         // Create structured prompt sections
         const promptSections = []
 
         // Main request
         promptSections.push(`TALK REQUEST:
-Generate a ${questionnaire.duration}-minute ${questionnaire.meetingType.replace('_', ' ')} talk on"${questionnaire.topic}".
-Target length: approximately ${targetWordCount} words.
-Speaker age range: ${questionnaire.speakerAge || 'Adult'}`)
+Generate a FULL ${questionnaire.duration}-minute ${questionnaire.meetingType.replace('_', ' ')} talk on "${questionnaire.topic}".
+CRITICAL: This must be a complete ${questionnaire.duration}-minute talk - NOT shorter!
+Target length: MINIMUM ${targetWordCount} words (approximately ${Math.round(targetWordCount * 0.8)}-${Math.round(targetWordCount * 1.2)} words).
+Speaker age range: ${questionnaire.speakerAge || 'Adult'}
+
+DURATION REQUIREMENTS:
+- Generate substantial content that will take the FULL ${questionnaire.duration} minutes to deliver
+- Do NOT create a shorter talk - expand all sections proportionally
+- Include detailed explanations, multiple examples, and thorough development of each point
+- For talks longer than 10 minutes, include additional main points and deeper doctrinal exploration`)
 
         // Meeting context
         if (questionnaire.meetingType === 'sacrament') {
@@ -562,9 +576,9 @@ This is for a stake conference. Focus on:
 - More formal but still personal tone
 - Universal gospel principles
 - Inspiring and uplifting message`)
-        } else if (questionnaire.meetingType === 'devotional') {
+        } else if (questionnaire.meetingType.includes('devotional') || questionnaire.meetingType.includes('fireside')) {
             promptSections.push(`MEETING CONTEXT:
-This is for a devotional. Focus on:
+This is for a devotional or fireside. Focus on:
 - Inspirational and uplifting message
 - Personal spiritual insights and testimony
 - Practical application of gospel principles
@@ -636,10 +650,10 @@ Since no specific personal story was provided, please:
 
         // Gospel Library references
         if (questionnaire.gospelLibraryLinks.length > 0) {
-            promptSections.push(`GOSPEL LIBRARY REFERENCES TO INCLUDE:
+            promptSections.push(`REQUIRED GOSPEL LIBRARY REFERENCES:
 ${questionnaire.gospelLibraryLinks.map((link: string) => `- ${link}`).join('\n')}
 
-Please reference and quote from these sources, ensuring they support your main points.`)
+CRITICAL: You MUST reference and quote from these specific sources provided by the user. These represent their personal study and preparation. Include these links in the final sources section of the talk.`)
         }
 
         // Specific scriptures
@@ -738,7 +752,16 @@ WRITING STYLE:
 - Include pauses and transitions ("Now, let me share...","As I've pondered this...")
 - Personal and authentic voice
 - NO WORD LIMITS - Generate full content appropriate for ${questionnaire.duration} minutes of speaking
-- Aim for approximately ${targetWordCount} words to fill the full time allocation`)
+- Aim for approximately ${targetWordCount} words to fill the full time allocation
+- DO NOT use markdown formatting like **bold** - use plain text only
+- If emphasis is needed, use italics or ALL CAPS sparingly, or rely on natural speech patterns
+
+SOURCES SECTION REQUIREMENT:
+At the end of your talk, include a "Sources" section that lists:
+1. ALL user-provided Gospel Library links exactly as given
+2. ALL scriptures you referenced in the talk
+3. ALL Church leader quotes and their sources from churchofjesuschrist.org
+Format: Simple bulleted list with full URLs for Gospel Library sources`)
 
         // Content restrictions
         promptSections.push(`CONTENT RESTRICTIONS:
@@ -844,13 +867,34 @@ CRITICAL REQUIREMENTS:
 1. Write in first person as if the speaker is delivering personally
 2. Use ONLY official Church content from https://www.churchofjesuschrist.org/ - NO EXCEPTIONS
 3. Include smooth transitions between sections
-4. Structure: Introduction → Main points → Personal application → Testimony
-5. End with personal testimony
+4. Structure: Introduction → Main points → Personal application → Testimony → Sources
+5. End with personal testimony followed by sources section
 6. Make it feel authentic and personal to the speaker
 7. Include specific scripture references and quotes from Church leaders
 8. Ensure the talk flows naturally when spoken aloud
-9. Generate content appropriate for the full duration specified (no artificial word limits)
+9. Generate content appropriate for the FULL duration specified - NO artificial word limits
 10. Use dynamic greetings appropriate for time/setting (not always "Good morning")
+11. MUST include ALL user-provided Gospel Library links in the sources section
+12. Use plain text formatting only - NO markdown bold (**text**) or other markdown
+
+DURATION COMPLIANCE:
+- Generate talks that will take the FULL specified duration to deliver
+- For 15+ minute talks, include substantial content with multiple main points
+- Expand all sections proportionally to fill the time
+- Do not create abbreviated or summary versions
+
+FORMATTING REQUIREMENTS:
+- Use plain text only - no markdown formatting
+- If emphasis is needed, use natural speech patterns or occasional ALL CAPS
+- Never use **bold** or *italic* markdown syntax
+- Keep formatting simple and readable
+
+SOURCES SECTION MANDATORY:
+Every talk MUST end with a "Sources" section containing:
+1. ALL user-provided Gospel Library links (exactly as provided)
+2. ALL scriptures referenced in the talk
+3. ALL Church leader quotes with their churchofjesuschrist.org sources
+Format as a simple bulleted list with full URLs
 
 STRICT CONTENT RESTRICTIONS:
 - ONLY reference content from https://www.churchofjesuschrist.org/
@@ -864,7 +908,7 @@ PURPOSE & PHILOSOPHY:
 This tool helps members who have already done their spiritual preparation and study. The AI enhances their prepared thoughts and testimony - it does not replace personal spiritual preparation. The user has provided their own research, personal story, and Church sources, showing they have built their own testimony first.
 
 RESPONSE FORMAT:
-Provide the talk content in a clear, readable format with proper paragraphs and transitions. Include a suggested title at the beginning.`
+Provide the talk content in a clear, readable format with proper paragraphs and transitions. Include a suggested title at the beginning and mandatory sources section at the end.`
         }
 
         // Create user message with the formatted prompt
@@ -1049,7 +1093,17 @@ function processAIResponse(aiContent: string, fallbackTopic: string): {
     }
 
     // Extract content starting after the title
-    const content = lines.slice(contentStartIndex).join('\n\n')
+    let content = lines.slice(contentStartIndex).join('\n\n')
+
+    // Clean up markdown formatting in content
+    content = content
+        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove **bold** formatting
+        .replace(/\*(.*?)\*/g, '$1') // Remove *italic* formatting  
+        .replace(/__(.*?)__/g, '$1') // Remove __bold__ formatting
+        .replace(/_(.*?)_/g, '$1') // Remove _italic_ formatting
+        .replace(/`(.*?)`/g, '$1') // Remove `code` formatting
+        .replace(/#{1,6}\s*/g, '') // Remove markdown headers
+        .trim()
 
     return {
         title: title || `Talk on ${fallbackTopic}`,
@@ -2469,19 +2523,22 @@ export async function searchUsers(
         }
 
         // Validate query
-        if (!query || query.length < 2) {
+        if (!query || query.trim().length < 1) {
             return {
                 success: true,
                 users: []
             }
         }
 
+        // Clean and normalize the query
+        const cleanQuery = query.trim().toLowerCase()
+
         // Import Prisma client
         const { PrismaClient } = await import('@prisma/client')
         const prisma = new PrismaClient()
 
         try {
-            // Search for users by email or name, excluding the current user
+            // Enhanced search for users by email or name, excluding the current user
             const users = await prisma.user.findMany({
                 where: {
                     AND: [
@@ -2492,23 +2549,65 @@ export async function searchUsers(
                         },
                         {
                             OR: [
+                                // Email search - exact and partial matches
                                 {
                                     email: {
-                                        contains: query,
+                                        contains: cleanQuery,
+                                        mode: 'insensitive'
+                                    }
+                                },
+                                {
+                                    email: {
+                                        startsWith: cleanQuery,
+                                        mode: 'insensitive'
+                                    }
+                                },
+                                // First name search - exact and partial matches
+                                {
+                                    firstName: {
+                                        contains: cleanQuery,
                                         mode: 'insensitive'
                                     }
                                 },
                                 {
                                     firstName: {
-                                        contains: query,
+                                        startsWith: cleanQuery,
+                                        mode: 'insensitive'
+                                    }
+                                },
+                                // Last name search - exact and partial matches
+                                {
+                                    lastName: {
+                                        contains: cleanQuery,
                                         mode: 'insensitive'
                                     }
                                 },
                                 {
                                     lastName: {
-                                        contains: query,
+                                        startsWith: cleanQuery,
                                         mode: 'insensitive'
                                     }
+                                },
+                                // Full name search (firstName + lastName)
+                                {
+                                    AND: [
+                                        {
+                                            OR: [
+                                                {
+                                                    firstName: {
+                                                        contains: cleanQuery.split(' ')[0] || '',
+                                                        mode: 'insensitive'
+                                                    }
+                                                },
+                                                {
+                                                    lastName: {
+                                                        contains: cleanQuery.split(' ')[0] || '',
+                                                        mode: 'insensitive'
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
                                 }
                             ]
                         }
@@ -2520,12 +2619,54 @@ export async function searchUsers(
                     firstName: true,
                     lastName: true
                 },
-                take: 10 // Limit results to prevent performance issues
+                orderBy: [
+                    // Prioritize exact matches
+                    {
+                        firstName: 'asc'
+                    },
+                    {
+                        lastName: 'asc'
+                    },
+                    {
+                        email: 'asc'
+                    }
+                ],
+                take: 15 // Increased limit for better results
+            })
+
+            // Remove duplicates and sort by relevance
+            const uniqueUsers = users.filter((user, index, self) =>
+                index === self.findIndex(u => u.id === user.id)
+            )
+
+            // Sort by relevance - exact matches first, then partial matches
+            const sortedUsers = uniqueUsers.sort((a, b) => {
+                const aFullName = `${a.firstName} ${a.lastName}`.toLowerCase()
+                const bFullName = `${b.firstName} ${b.lastName}`.toLowerCase()
+
+                // Exact email match gets highest priority
+                if (a.email.toLowerCase() === cleanQuery) return -1
+                if (b.email.toLowerCase() === cleanQuery) return 1
+
+                // Exact name match gets second priority
+                if (aFullName === cleanQuery) return -1
+                if (bFullName === cleanQuery) return 1
+
+                // Email starts with query gets third priority
+                if (a.email.toLowerCase().startsWith(cleanQuery)) return -1
+                if (b.email.toLowerCase().startsWith(cleanQuery)) return 1
+
+                // Name starts with query gets fourth priority
+                if (aFullName.startsWith(cleanQuery)) return -1
+                if (bFullName.startsWith(cleanQuery)) return 1
+
+                // Default alphabetical sort
+                return aFullName.localeCompare(bFullName)
             })
 
             return {
                 success: true,
-                users
+                users: sortedUsers
             }
         } finally {
             await prisma.$disconnect()

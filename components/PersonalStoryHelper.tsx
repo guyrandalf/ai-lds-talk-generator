@@ -92,7 +92,12 @@ export default function PersonalStoryHelper({ topic, onSuggestionClick }: Person
     return (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <button
-                onClick={() => setIsExpanded(!isExpanded)}
+                type="button"
+                onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setIsExpanded(!isExpanded)
+                }}
                 className="flex items-center justify-between w-full text-left"
             >
                 <div className="flex items-center space-x-2">
@@ -111,7 +116,7 @@ export default function PersonalStoryHelper({ topic, onSuggestionClick }: Person
             {isExpanded && (
                 <div className="mt-4 space-y-4">
                     <p className="text-sm text-blue-800">
-                        Click on any suggestion below to help you think about your personal experiences with "{topic}":
+                        Click on any suggestion below to help you think about your personal experiences with &quot;{topic}&quot;:
                     </p>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -125,8 +130,13 @@ export default function PersonalStoryHelper({ topic, onSuggestionClick }: Person
                                 <div className="space-y-1">
                                     {category.items.map((suggestion, index) => (
                                         <button
+                                            type="button"
                                             key={index}
-                                            onClick={() => onSuggestionClick(suggestion)}
+                                            onClick={(e) => {
+                                                e.preventDefault()
+                                                e.stopPropagation()
+                                                onSuggestionClick(suggestion)
+                                            }}
                                             className="w-full text-left text-sm p-2 rounded border border-gray-200 bg-white hover:bg-gray-50 hover:border-blue-300 transition-colors"
                                         >
                                             {suggestion}
@@ -139,7 +149,7 @@ export default function PersonalStoryHelper({ topic, onSuggestionClick }: Person
 
                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                         <p className="text-sm text-amber-800">
-                            <strong>Remember:</strong> Your personal story doesn't need to be perfect or dramatic.
+                            <strong>Remember:</strong> Your personal story doesn&apos;t need to be perfect or dramatic.
                             Simple, sincere experiences often touch hearts the most. Focus on how this topic has
                             personally impacted your life or testimony.
                         </p>

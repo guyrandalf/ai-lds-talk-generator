@@ -1,7 +1,20 @@
 // Talk generation type definitions
 // This file contains types for talk generation functionality
 
-export type MeetingType = 'sacrament' | 'stake_conference' | 'devotional';
+export type MeetingType =
+    | 'sacrament'
+    | 'stake_conference'
+    | 'ward_conference'
+    | 'area_devotional'
+    | 'ysa_devotional'
+    | 'youth_fireside'
+    | 'mission_conference'
+    | 'senior_devotional'
+    | 'general_fireside'
+    | 'sunday_school'
+    | 'priesthood_relief_society'
+    | 'primary'
+    | 'young_men_women';
 
 export interface TalkQuestionnaire {
     topic: string;

@@ -63,7 +63,7 @@ function GeneratePageContent() {
     useEffect(() => {
         const hasUnsavedTalk = currentStep === 'display' && generatedTalk && !generatedTalk.id
         navigationGuard.setUnsavedChanges(!!hasUnsavedTalk)
-    }, [currentStep, generatedTalk, navigationGuard, navigationGuard.setUnsavedChanges])
+    }, [currentStep, generatedTalk, navigationGuard.setUnsavedChanges])
 
     const handleQuestionnaireSubmit = async (data: TalkQuestionnaire) => {
         setCurrentStep('generating')

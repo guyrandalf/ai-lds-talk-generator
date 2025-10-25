@@ -174,11 +174,27 @@ export default function TalkQuestionnaire({
             [field]: value
         }))
 
-        // Clear error when user starts typing
+        // Clear related errors when user starts typing
         if (errors[field]) {
             setErrors(prev => ({
                 ...prev,
                 [field]: ''
+            }))
+        }
+
+        // Clear specific error types when user provides data
+        if (field === 'gospelLibraryLinks' || field === 'specificScriptures') {
+            setErrors(prev => ({
+                ...prev,
+                sources: '',
+                specificScriptures: ''
+            }))
+        }
+
+        if (field === 'preferredThemes' || field === 'customThemes') {
+            setErrors(prev => ({
+                ...prev,
+                themes: ''
             }))
         }
     }
@@ -189,7 +205,7 @@ export default function TalkQuestionnaire({
 
         setFormData(prev => ({
             ...prev,
-            meetingType: meetingType as 'sacrament' | 'stake_conference',
+            meetingType: meetingType as typeof formData.meetingType,
             audienceType: autoAudience || prev.audienceType
         }))
 
@@ -223,32 +239,112 @@ export default function TalkQuestionnaire({
 
 
 
+    // Check if form is complete and valid for submit button state
+    const isFormComplete = (): boolean => {
+        try {
+            // Required: Topic
+            if (!formData.topic?.trim()) return false
+
+            // Required: Duration
+            if (!formData.duration || formData.duration < 5 || formData.duration > 60) return false
+
+            // Required: Meeting Type
+            if (!formData.meetingType?.trim()) return false
+
+            // Required: Audience Type (unless auto-selected)
+            const autoAudience = getAutoSelectedAudience(formData.meetingType)
+            if (!autoAudience && !formData.audienceType?.trim()) return false
+
+            // Required: Speaker Age
+            if (!formData.speakerAge?.trim()) return false
+
+            // Required: Personal story
+            if (!formData.personalStory?.trim()) return false
+
+            // Required: At least one Gospel Library link
+            const validLinks = (formData.gospelLibraryLinks || []).filter(link => link?.trim())
+            if (validLinks.length === 0) return false
+
+            // Required: At least one specific scripture
+            const validScriptures = (formData.specificScriptures || []).filter(scripture => scripture?.trim())
+            if (validScriptures.length === 0) return false
+
+            // Required: At least one theme selected
+            const totalThemes = (formData.preferredThemes?.length || 0) + (formData.customThemes?.length || 0)
+            if (totalThemes === 0) return false
+
+            // Required: Audience Context
+            if (!formData.audienceContext?.trim()) return false
+
+            // Check Gospel Library links format
+            for (const link of validLinks) {
+                if (link && !link.startsWith('https://www.churchofjesuschrist.org/')) {
+                    return false
+                }
+            }
+
+            return true
+        } catch (error) {
+            console.error('Error in isFormComplete:', error)
+            return false
+        }
+    }
+
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {}
 
+        // Required: Topic
         if (!formData.topic.trim()) {
             newErrors.topic = 'Topic is required'
         }
 
+        // Required: Duration
         if (formData.duration < 5 || formData.duration > 60) {
             newErrors.duration = 'Duration must be between 5 and 60 minutes'
         }
 
+        // Required: Meeting Type (should always have default, but validate)
+        if (!formData.meetingType) {
+            newErrors.meetingType = 'Meeting type is required'
+        }
+
+        // Required: Audience Type (unless auto-selected)
+        const autoAudience = getAutoSelectedAudience(formData.meetingType)
+        if (!autoAudience && !formData.audienceType?.trim()) {
+            newErrors.audienceType = 'Audience type is required'
+        }
+
+        // Required: Speaker Age
         if (!formData.speakerAge?.trim()) {
             newErrors.speakerAge = 'Speaker age range is required'
         }
 
-        // STRICT REQUIREMENT: Personal story is now required
+        // Required: Personal story
         if (!formData.personalStory?.trim()) {
             newErrors.personalStory = 'Personal story is required. Please share your own research and preparation to build your testimony.'
         }
 
-        // STRICT REQUIREMENT: At least one Church link must be provided
+        // Required: At least one Church source (Gospel Library link)
         const validLinks = formData.gospelLibraryLinks.filter(link => link.trim())
-        const validScriptures = formData.specificScriptures?.filter(scripture => scripture.trim()) || []
+        if (validLinks.length === 0) {
+            newErrors.sources = 'At least one Gospel Library link is required to show your preparation.'
+        }
 
-        if (validLinks.length === 0 && validScriptures.length === 0) {
-            newErrors.sources = 'At least one Gospel Library link or scripture reference is required to show your preparation.'
+        // Required: At least one specific scripture
+        const validScriptures = formData.specificScriptures?.filter(scripture => scripture.trim()) || []
+        if (validScriptures.length === 0) {
+            newErrors.specificScriptures = 'At least one specific scripture reference is required.'
+        }
+
+        // Required: At least one theme selected
+        const totalThemes = formData.preferredThemes.length + formData.customThemes.length
+        if (totalThemes === 0) {
+            newErrors.themes = 'Please select at least one theme for your talk'
+        }
+
+        // Required: Audience Context
+        if (!formData.audienceContext?.trim()) {
+            newErrors.audienceContext = 'Audience context is required to tailor your talk appropriately'
         }
 
         // Validate Gospel Library links format - STRICT churchofjesuschrist.org only
@@ -266,8 +362,15 @@ export default function TalkQuestionnaire({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
 
+        // Don't submit if form is not complete
+        if (!isFormComplete()) {
+            toast.error('Please complete all required fields before generating your talk.')
+            return
+        }
+
         if (!validateForm()) {
-            toast.error('Please fix the errors and try again.')
+            toast.error('Please fix the errors and try again. Your form data has been preserved.')
+            // Form data is automatically preserved in state - no need to reset
             return
         }
 
@@ -325,6 +428,7 @@ export default function TalkQuestionnaire({
                                             }`}
                                         placeholder="e.g., Faith, Service, Gratitude"
                                         disabled={isLoading}
+                                        required
                                     />
                                     {errors.topic && <p className="text-red-600 text-sm mt-1">{errors.topic}</p>}
                                 </div>
@@ -343,6 +447,7 @@ export default function TalkQuestionnaire({
                                         className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${errors.duration ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
                                             }`}
                                         disabled={isLoading}
+                                        required
                                     />
                                     {errors.duration && <p className="text-red-600 text-sm mt-1">{errors.duration}</p>}
                                 </div>
@@ -388,6 +493,7 @@ export default function TalkQuestionnaire({
                                 <div>
                                     <label htmlFor="audienceType" className="block text-sm font-medium text-gray-700 mb-2">
                                         Audience Type
+                                        {!autoSelectedAudience && <span className="text-red-500 ml-1">*</span>}
                                         {autoSelectedAudience && (
                                             <span className="text-sm text-blue-600 ml-2">(Auto-selected based on meeting type)</span>
                                         )}
@@ -396,10 +502,11 @@ export default function TalkQuestionnaire({
                                         id="audienceType"
                                         value={formData.audienceType}
                                         onChange={(e) => handleInputChange('audienceType', e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                        className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${errors.audienceType ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'}`}
                                         disabled={isLoading || !!autoSelectedAudience}
+                                        required={!autoSelectedAudience}
                                     >
-                                        <option value="">Select audience type (optional)</option>
+                                        <option value="">Select audience type</option>
                                         {availableAudienceTypes.map(type => (
                                             <option key={type.value} value={type.value}>{type.label}</option>
                                         ))}
@@ -409,6 +516,7 @@ export default function TalkQuestionnaire({
                                             This meeting type automatically targets {availableAudienceTypes.find(t => t.value === autoSelectedAudience)?.label}
                                         </p>
                                     )}
+                                    {errors.audienceType && <p className="text-red-600 text-sm mt-1">{errors.audienceType}</p>}
                                 </div>
 
                                 <div>
@@ -542,7 +650,11 @@ export default function TalkQuestionnaire({
                                         {(formData.gospelLibraryLinks?.length || 0) > 1 && (
                                             <button
                                                 type="button"
-                                                onClick={() => removeArrayInput('gospelLibraryLinks', index)}
+                                                onClick={(e) => {
+                                                    e.preventDefault()
+                                                    e.stopPropagation()
+                                                    removeArrayInput('gospelLibraryLinks', index)
+                                                }}
                                                 className="px-3 py-3 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors"
                                                 disabled={isLoading}
                                             >
@@ -560,7 +672,11 @@ export default function TalkQuestionnaire({
 
                                 <button
                                     type="button"
-                                    onClick={() => addArrayInput('gospelLibraryLinks')}
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        addArrayInput('gospelLibraryLinks')
+                                    }}
                                     className="flex items-center text-blue-600 hover:text-blue-700 font-medium"
                                     disabled={isLoading}
                                 >
@@ -579,30 +695,38 @@ export default function TalkQuestionnaire({
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                                 </svg>
                                 Talk Themes
+                                <span className="text-red-500 ml-1">*</span>
                             </h2>
 
                             <p className="text-sm text-gray-600 mb-4">
                                 Choose from common themes or add your own custom themes to emphasize in your talk:
                             </p>
+                            {errors.themes && <p className="text-red-600 text-sm mb-4 font-medium">{errors.themes}</p>}
 
                             <CustomThemeInput
                                 predefinedThemes={commonThemes}
-                                selectedThemes={[...formData.preferredThemes, ...formData.customThemes.filter(theme => formData.preferredThemes.includes(theme))]}
-                                customThemes={formData.customThemes}
+                                selectedThemes={[...(formData.preferredThemes || []), ...(formData.customThemes || []).filter(theme => (formData.preferredThemes || []).includes(theme))]}
+                                customThemes={formData.customThemes || []}
                                 onThemeChange={(themes) => {
                                     // Separate predefined and custom themes
                                     const predefinedSelected = themes.filter(theme => commonThemes.includes(theme))
-                                    const customSelected = themes.filter(theme => formData.customThemes.includes(theme))
+                                    const customSelected = themes.filter(theme => (formData.customThemes || []).includes(theme))
 
                                     handleInputChange('preferredThemes', [...predefinedSelected, ...customSelected])
                                 }}
                                 onCustomThemeAdd={(theme) => {
-                                    const newCustomThemes = [...formData.customThemes, theme]
+                                    const newCustomThemes = [...(formData.customThemes || []), theme]
                                     handleInputChange('customThemes', newCustomThemes)
+                                    // Also add to preferred themes so it's selected
+                                    const newPreferredThemes = [...(formData.preferredThemes || []), theme]
+                                    handleInputChange('preferredThemes', newPreferredThemes)
                                 }}
                                 onCustomThemeRemove={(theme) => {
-                                    const newCustomThemes = formData.customThemes.filter(t => t !== theme)
+                                    const newCustomThemes = (formData.customThemes || []).filter(t => t !== theme)
                                     handleInputChange('customThemes', newCustomThemes)
+                                    // Also remove from preferred themes
+                                    const newPreferredThemes = (formData.preferredThemes || []).filter(t => t !== theme)
+                                    handleInputChange('preferredThemes', newPreferredThemes)
                                 }}
                                 disabled={isLoading}
                             />
@@ -615,11 +739,13 @@ export default function TalkQuestionnaire({
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                 </svg>
                                 Audience Context
+                                <span className="text-red-500 ml-1">*</span>
                             </h2>
 
                             <p className="text-sm text-gray-600 mb-4">
                                 Help us tailor your talk content to your specific audience and cultural context:
                             </p>
+                            {errors.audienceContext && <p className="text-red-600 text-sm mb-4 font-medium">{errors.audienceContext}</p>}
 
                             <AudienceContextSelector
                                 selectedContext={formData.audienceContext}
@@ -628,19 +754,34 @@ export default function TalkQuestionnaire({
                             />
                         </div>
 
-                        {/* Specific Scriptures */}
-                        <div className="bg-yellow-50 rounded-xl p-6">
+                        {/* Specific Scriptures - Now Required */}
+                        <div className="bg-yellow-50 rounded-xl p-6 border-2 border-yellow-200">
                             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                                 <svg className="w-5 h-5 mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                                 </svg>
                                 Specific Scriptures
+                                <span className="text-red-500 ml-1">*</span>
                             </h2>
+
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                                <div className="flex">
+                                    <svg className="w-5 h-5 text-amber-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <div className="text-sm text-amber-800">
+                                        <p className="font-medium mb-1">REQUIRED:</p>
+                                        <p>You must provide at least one specific scripture reference. This shows your scriptural preparation and ensures doctrinal foundation for your talk.</p>
+                                    </div>
+                                </div>
+                            </div>
 
                             <div className="space-y-4">
                                 <p className="text-sm text-gray-600">
                                     List specific scriptures you&apos;d like to reference (e.g., &quot;John 3:16&quot;, &quot;2 Nephi 2:25&quot;):
                                 </p>
+
+                                {errors.specificScriptures && <p className="text-red-600 text-sm font-medium">{errors.specificScriptures}</p>}
 
                                 {(formData.specificScriptures || []).map((scripture, index) => (
                                     <div key={index} className="flex gap-3">
@@ -648,14 +789,20 @@ export default function TalkQuestionnaire({
                                             type="text"
                                             value={scripture}
                                             onChange={(e) => handleArrayInputChange('specificScriptures', index, e.target.value)}
-                                            className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            className={`flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${errors.specificScriptures ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+                                                }`}
                                             placeholder="e.g., John 3:16, 2 Nephi 2:25"
                                             disabled={isLoading}
+                                            required={index === 0} // First scripture is required
                                         />
                                         {(formData.specificScriptures?.length || 0) > 1 && (
                                             <button
                                                 type="button"
-                                                onClick={() => removeArrayInput('specificScriptures', index)}
+                                                onClick={(e) => {
+                                                    e.preventDefault()
+                                                    e.stopPropagation()
+                                                    removeArrayInput('specificScriptures', index)
+                                                }}
                                                 className="px-3 py-3 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors"
                                                 disabled={isLoading}
                                             >
@@ -669,7 +816,11 @@ export default function TalkQuestionnaire({
 
                                 <button
                                     type="button"
-                                    onClick={() => addArrayInput('specificScriptures')}
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        addArrayInput('specificScriptures')
+                                    }}
                                     className="flex items-center text-blue-600 hover:text-blue-700 font-medium"
                                     disabled={isLoading}
                                 >
@@ -683,20 +834,67 @@ export default function TalkQuestionnaire({
 
                         {/* Submit Button */}
                         <div className="flex justify-center pt-6">
-                            <EnhancedButton
-                                type="submit"
-                                loading={isLoading}
-                                loadingText={getLoadingText()}
-                                progress={progress}
-                                showProgress={isLoading && progress > 0}
-                                size="lg"
-                                className="w-full sm:w-auto px-8 py-4 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg hover:shadow-xl min-h-[48px]"
-                            >
-                                Generate My Talk
-                                <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                </svg>
-                            </EnhancedButton>
+                            <div className="w-full sm:w-auto">
+                                {!isFormComplete() && (
+                                    <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                                        <div className="flex items-start">
+                                            <svg className="w-5 h-5 text-amber-600 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                            </svg>
+                                            <div className="text-sm text-amber-800">
+                                                <p className="font-medium mb-1">Complete All Required Fields</p>
+                                                <p>Please fill in all required fields (marked with *) before generating your talk. This ensures we have everything needed to create a meaningful, personalized talk for you.</p>
+                                                {/* Debug info - remove in production */}
+                                                <details className="mt-2">
+                                                    <summary className="cursor-pointer text-xs">Debug Info</summary>
+                                                    <div className="mt-1 text-xs space-y-1">
+                                                        <div>Topic: {formData.topic ? '✓' : '✗'}</div>
+                                                        <div>Duration: {formData.duration >= 5 && formData.duration <= 60 ? '✓' : '✗'}</div>
+                                                        <div>Meeting Type: {formData.meetingType ? '✓' : '✗'}</div>
+                                                        <div>Audience Type: {getAutoSelectedAudience(formData.meetingType) || formData.audienceType ? '✓' : '✗'}</div>
+                                                        <div>Speaker Age: {formData.speakerAge ? '✓' : '✗'}</div>
+                                                        <div>Personal Story: {formData.personalStory ? '✓' : '✗'}</div>
+                                                        <div>Gospel Links: {(formData.gospelLibraryLinks || []).filter(l => l?.trim()).length > 0 ? '✓' : '✗'}</div>
+                                                        <div>Scriptures: {(formData.specificScriptures || []).filter(s => s?.trim()).length > 0 ? '✓' : '✗'}</div>
+                                                        <div>Themes: {((formData.preferredThemes?.length || 0) + (formData.customThemes?.length || 0)) > 0 ? '✓' : '✗'}</div>
+                                                        <div>Audience Context: {formData.audienceContext ? '✓' : '✗'}</div>
+                                                    </div>
+                                                </details>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <EnhancedButton
+                                    type="submit"
+                                    loading={isLoading}
+                                    loadingText={getLoadingText()}
+                                    progress={progress}
+                                    showProgress={isLoading && progress > 0}
+                                    size="lg"
+                                    disabled={!isFormComplete() || isLoading}
+                                    className={`w-full sm:w-auto px-8 py-4 font-semibold rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg min-h-[48px] transition-all duration-200 ${isFormComplete() && !isLoading
+                                        ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-xl cursor-pointer'
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        }`}
+                                >
+                                    {isFormComplete() ? (
+                                        <>
+                                            Generate My Talk
+                                            <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                            </svg>
+                                        </>
+                                    ) : (
+                                        <>
+                                            Complete Required Fields
+                                            <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                            </svg>
+                                        </>
+                                    )}
+                                </EnhancedButton>
+                            </div>
                         </div>
                     </form>
                 </div>
