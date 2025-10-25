@@ -12,14 +12,14 @@ export interface SecurityViolationLog {
     severity: string
     description: string
     detectedPattern: string
-    userInput?: string
-    ipAddress?: string
-    userAgent?: string
-    sessionId?: string
+    userInput?: string | null
+    ipAddress?: string | null
+    userAgent?: string | null
+    sessionId?: string | null
     violationCount: number
     lastViolationAt: Date
     createdAt: Date
-    userId?: string
+    userId?: string | null
 }
 
 export interface RateLimitResult {
