@@ -6,10 +6,10 @@
  * @template T - The type of data returned on success
  */
 export interface ApiResponse<T = unknown> {
-    success: boolean;
-    data?: T;
-    error?: string;
-    warnings?: string[];
+ success: boolean;
+ data?: T;
+ error?: string;
+ warnings?: string[];
 }
 
 /**
@@ -17,38 +17,38 @@ export interface ApiResponse<T = unknown> {
  * @template T - The type of items in the paginated list
  */
 export interface PaginatedResponse<T> extends ApiResponse<T[]> {
-    pagination: {
-        page: number;
-        limit: number;
-        total: number;
-        hasMore: boolean;
-    };
+ pagination: {
+ page: number;
+ limit: number;
+ total: number;
+ hasMore: boolean;
+ };
 }
 
 /**
  * Validation-specific response for form submissions and data validation
  */
 export interface ValidationResponse extends ApiResponse {
-    violations?: ValidationViolation[];
+ violations?: ValidationViolation[];
 }
 
 /**
  * Individual validation violation details
  */
 export interface ValidationViolation {
-    field: string;
-    message: string;
-    code: string;
+ field: string;
+ message: string;
+ code: string;
 }
 
 /**
  * Error response for API failures
  */
 export interface ErrorResponse extends ApiResponse<never> {
-    success: false;
-    error: string;
-    errorCode?: string;
-    details?: Record<string, unknown>;
+ success: false;
+ error: string;
+ errorCode?: string;
+ details?: Record<string, unknown>;
 }
 
 /**
@@ -56,6 +56,6 @@ export interface ErrorResponse extends ApiResponse<never> {
  * @template T - The type of data returned
  */
 export interface SuccessResponse<T> extends ApiResponse<T> {
-    success: true;
-    data: T;
+ success: true;
+ data: T;
 }

@@ -12,7 +12,7 @@ interface EditTalkPageProps {
 
 export default async function EditTalkPage({ params }: EditTalkPageProps) {
     const user = await getCurrentUser()
-    const { id } = await params
+    const { id } = params
 
     if (!user) {
         redirect('/auth/login')

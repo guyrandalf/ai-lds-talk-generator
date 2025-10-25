@@ -221,7 +221,7 @@ export function useTalkNavigationGuard(talk?: GeneratedTalk, originalTalk?: Gene
             // Return false to show browser warning
             return !hasChanges
         },
-        onNavigationAttempt: (url) => {
+        onNavigationAttempt: () => {
             // Return false to show custom warning dialog
             return !hasChanges
         }
@@ -230,7 +230,7 @@ export function useTalkNavigationGuard(talk?: GeneratedTalk, originalTalk?: Gene
     // Sync changes with navigation guard
     useEffect(() => {
         navigationGuard.setUnsavedChanges(hasChanges)
-    }, [hasChanges, navigationGuard.setUnsavedChanges])
+    }, [hasChanges, navigationGuard, navigationGuard.setUnsavedChanges])
 
     return useMemo(() => ({
         ...navigationGuard,

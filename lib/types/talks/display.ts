@@ -3,7 +3,7 @@
 
 // Basic talk interface for sharing and display purposes
 export interface BasicTalk {
-    id: string
-    title: string
-    content: string
+ id: string
+ title: string
+ content: string
 }

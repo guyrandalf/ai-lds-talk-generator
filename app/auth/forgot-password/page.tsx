@@ -2,12 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AuthLayout from '@/components/auth/AuthLayout';
 import { toast } from 'sonner';
+import { Mail, Loader2 } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('');
@@ -52,79 +49,82 @@ export default function ForgotPasswordPage() {
     if (isSubmitted) {
         return (
             <AuthLayout title="Check Your Email" subtitle="We've sent password reset instructions to your email address if an account exists.">
-                <Card className="w-full max-w-md">
-                    <CardHeader className="text-center">
-                        <CardTitle>Check Your Email</CardTitle>
-                        <CardDescription>
-                            We&apos;ve sent password reset instructions to your email address if an account exists.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="text-center text-sm text-muted-foreground">
-                            <p>Didn&apos;t receive the email? Check your spam folder or try again in a few minutes.</p>
-                        </div>
-                        <div className="flex flex-col space-y-2">
-                            <Button
-                                variant="outline"
-                                onClick={() => {
-                                    setIsSubmitted(false);
-                                    setEmail('');
-                                }}
-                                className="w-full"
-                            >
-                                Try Different Email
-                            </Button>
-                            <Link href="/auth/login">
-                                <Button variant="ghost" className="w-full">
-                                    Back to Login
-                                </Button>
+                <div className="text-center space-y-6">
+                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl">
+                        <p className="text-sm">
+                            Didn&apos;t receive the email? Check your spam folder or try again in a few minutes.
+                        </p>
+                    </div>
+
+                    <div className="space-y-3">
+                        <button
+                            onClick={() => {
+                                setIsSubmitted(false);
+                                setEmail('');
+                            }}
+                            className="w-full bg-gray-100 text-gray-700 py-3 px-4 rounded-xl font-semibold hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200"
+                        >
+                            Try Different Email
+                        </button>
+
+                        <div className="text-center">
+                            <Link href="/auth/login" className="text-blue-600 hover:text-blue-700 font-medium">
+                                Back to Login
                             </Link>
                         </div>
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
             </AuthLayout>
         );
     }
 
     return (
         <AuthLayout title="Forgot Password" subtitle="Enter your email address and we'll send you a link to reset your password.">
-            <Card className="w-full max-w-md">
-                <CardHeader className="text-center">
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email Address</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="Enter your email address"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                disabled={isLoading}
-                                required
-                            />
-                        </div>
-
-                        <Button
-                            type="submit"
-                            className="w-full"
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                        Email Address
+                    </label>
+                    <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            required
+                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            placeholder="Enter your email address"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                             disabled={isLoading}
-                        >
-                            {isLoading ? 'Sending...' : 'Send Reset Link'}
-                        </Button>
+                        />
+                    </div>
+                </div>
 
-                        <div className="text-center">
-                            <Link
-                                href="/auth/login"
-                                className="text-sm text-muted-foreground hover:text-primary"
-                            >
-                                Remember your password? Sign in
-                            </Link>
+                <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full bg-blue-600 text-white py-3 px-4 rounded-xl font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                    {isLoading ? (
+                        <div className="flex items-center justify-center">
+                            <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5" />
+                            Sending...
                         </div>
-                    </form>
-                </CardContent>
-            </Card>
+                    ) : (
+                        'Send Reset Link'
+                    )}
+                </button>
+
+                <div className="text-center">
+                    <p className="text-gray-600">
+                        Remember your password?{' '}
+                        <Link href="/auth/login" className="text-blue-600 hover:text-blue-700 font-medium">
+                            Sign in here
+                        </Link>
+                    </p>
+                </div>
+            </form>
         </AuthLayout>
     );
 }

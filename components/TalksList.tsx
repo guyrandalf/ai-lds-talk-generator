@@ -46,9 +46,6 @@ export default function TalksList({ talks }: TalksListProps) {
                         <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center space-x-3 mb-2">
-                                    <h4 className="text-lg font-semibold truncate">
-                                        {talk.title}
-                                    </h4>
                                     <Badge variant={talk.meetingType === 'sacrament' ? 'default' : 'secondary'}>
                                         {talk.meetingType === 'sacrament' ? 'Sacrament Meeting' : 'Stake Conference'}
                                     </Badge>
@@ -72,6 +69,9 @@ export default function TalksList({ talks }: TalksListProps) {
                                         </div>
                                     )}
                                 </div>
+                                <h4 className="text-lg font-semibold truncate">
+                                    {talk.title}
+                                </h4>
 
                                 <p className="text-muted-foreground text-sm line-clamp-2">
                                     {talk.content.substring(0, 150)}...

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { getCurrentUser } from '@/lib/actions/auth'
-import { Shield, User, Download, ArrowRight, BookOpen, Users, Sparkles } from 'lucide-react'
+import { Shield, User, Download, ArrowRight, BookOpen, Sparkles } from 'lucide-react'
 
 export default async function Home() {
   const user = await getCurrentUser()
@@ -65,7 +65,7 @@ export default async function Home() {
             {/* Authentication Section */}
             {!user && (
               <div className="max-w-xl mx-auto mb-16">
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-100">
+                <div className="rounded-2xl p-8 border border-blue-200">
                   <div className="text-center">
                     <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Sparkles className="w-8 h-8 text-blue-600" />

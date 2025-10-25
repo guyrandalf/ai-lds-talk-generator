@@ -64,31 +64,31 @@ export default function Error({ error, reset }: ErrorProps) {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4 transition-colors">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 transition-colors">
             <div className="max-w-md w-full">
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-8 text-center transition-colors">
+                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 text-center transition-colors">
                     {/* Error Icon */}
-                    <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <AlertTriangle className="w-8 h-8 text-red-600" />
                     </div>
 
                     {/* Error Title */}
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-4">
                         {getErrorTitle(error)}
                     </h1>
 
                     {/* Error Message */}
-                    <p className="text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
+                    <p className="text-gray-600 mb-8 leading-relaxed">
                         {getErrorMessage(error)}
                     </p>
 
                     {/* Error Details (Development Only) */}
                     {process.env.NODE_ENV === 'development' && (
                         <details className="mb-6 text-left">
-                            <summary className="cursor-pointer text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                            <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700 :text-gray-300">
                                 Technical Details
                             </summary>
-                            <div className="mt-2 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs font-mono text-gray-800 dark:text-gray-200 overflow-auto">
+                            <div className="mt-2 p-3 bg-gray-100 rounded-lg text-xs font-mono text-gray-800 overflow-auto">
                                 <div className="mb-2">
                                     <strong>Error:</strong> {error.message}
                                 </div>
@@ -119,7 +119,7 @@ export default function Error({ error, reset }: ErrorProps) {
 
                         <Link
                             href="/"
-                            className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200"
+                            className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 :bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200"
                         >
                             <Home className="w-4 h-4 mr-2" />
                             Go Home
@@ -127,7 +127,7 @@ export default function Error({ error, reset }: ErrorProps) {
                     </div>
 
                     {/* Help Text */}
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-6">
+                    <p className="text-sm text-gray-500 mt-6">
                         If this problem persists, please try refreshing the page or contact support.
                     </p>
                 </div>

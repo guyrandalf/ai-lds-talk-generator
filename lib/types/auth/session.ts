@@ -7,9 +7,9 @@ import { BaseUser } from './user'
  * User session interface for managing user sessions
  */
 export interface UserSession {
-    userId: string
-    sessionId?: string
-    expiresAt?: Date
+ userId: string
+ sessionId?: string
+ expiresAt?: Date
 }
 
 /**
@@ -17,8 +17,8 @@ export interface UserSession {
  * Used to return success/error status along with user data
  */
 export interface AuthResult {
-    success: boolean
-    user?: BaseUser
-    error?: string
-    warnings?: string[]
+ success: boolean
+ user?: BaseUser
+ error?: string
+ warnings?: string[]
 }

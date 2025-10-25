@@ -7,7 +7,7 @@ export interface TalkQuestionnaire {
     topic: string;
     duration: number;
     meetingType: MeetingType;
-    personalStory: string;
+    personalStory?: string;
     gospelLibraryLinks: string[];
     audienceType?: string;
     speakerAge?: string;
