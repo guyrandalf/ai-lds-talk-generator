@@ -29,18 +29,31 @@ interface XAIMessage {
 const questionnaireSchema = z.object({
     topic: z.string().min(1, 'Topic is required').max(200, 'Topic is too long'),
     duration: z.number().min(5, 'Duration must be at least 5 minutes').max(60, 'Duration cannot exceed 60 minutes'),
-    meetingType: z.enum(['sacrament', 'stake_conference'], {
+    meetingType: z.enum(['sacrament', 'stake_conference', 'devotional'], {
         message: 'Please select a valid meeting type'
     }),
-    personalStory: z.string().max(5000, 'Personal story is too long').optional(),
-    gospelLibraryLinks: z.array(z.string()).default([]),
+    personalStory: z.string().min(1, 'Personal story is required to show your preparation and build testimony').max(5000, 'Personal story is too long'),
+    gospelLibraryLinks: z.array(z.string()).refine(
+        (links) => links.every(link => !link.trim() || link.startsWith('https://www.churchofjesuschrist.org/')),
+        { message: 'All Gospel Library links must be from https://www.churchofjesuschrist.org/' }
+    ).default([]),
     audienceType: z.string().optional(),
-    speakerAge: z.string().optional(),
+    speakerAge: z.string().min(1, 'Speaker age range is required'),
     preferredThemes: z.array(z.string()).default([]),
     customThemes: z.array(z.string()).default([]),
     audienceContext: z.string().optional(),
     specificScriptures: z.array(z.string()).default([])
-})
+}).refine(
+    (data) => {
+        const validLinks = data.gospelLibraryLinks.filter(link => link.trim())
+        const validScriptures = data.specificScriptures.filter(scripture => scripture.trim())
+        return validLinks.length > 0 || validScriptures.length > 0
+    },
+    {
+        message: 'At least one Gospel Library link or scripture reference is required',
+        path: ['gospelLibraryLinks']
+    }
+)
 
 /**
  * Processes and validates questionnaire data from the form
@@ -542,13 +555,20 @@ This is for a sacrament meeting. Focus on:
 - Doctrinal principles that strengthen faith
 - Personal application for daily living
 - Appropriate for all ages including children`)
-        } else {
+        } else if (questionnaire.meetingType === 'stake_conference') {
             promptSections.push(`MEETING CONTEXT:
 This is for a stake conference. Focus on:
 - Broader audience from multiple wards
 - More formal but still personal tone
 - Universal gospel principles
 - Inspiring and uplifting message`)
+        } else if (questionnaire.meetingType === 'devotional') {
+            promptSections.push(`MEETING CONTEXT:
+This is for a devotional. Focus on:
+- Inspirational and uplifting message
+- Personal spiritual insights and testimony
+- Practical application of gospel principles
+- Intimate and heartfelt tone appropriate for a devotional setting`)
         }
 
         // Audience specification
@@ -692,19 +712,22 @@ You are speaking to a diverse, worldwide audience with varied cultural backgroun
         promptSections.push(`TALK STRUCTURE REQUIREMENTS:
 
 1. OPENING (1-2 minutes):
- - Warm greeting and connection with audience
+ - Dynamic greeting appropriate for time of day and setting (avoid fixed "Good morning" - use "Good afternoon," "Good evening," or "Brothers and sisters" as appropriate)
+ - Warm connection with audience
  - Clear introduction of the topic
  - Brief preview of what will be shared
 
 2. MAIN CONTENT (${Math.max(1, questionnaire.duration - 4)}-${questionnaire.duration - 2} minutes):
- - 2-3 main points that develop the topic
- - Scripture references and quotes from Church leaders
- - Personal stories and applications
+ - Develop the topic thoroughly with depth appropriate to the ${questionnaire.duration}-minute duration
+ - Include 2-4 main points depending on talk length (more points for longer talks)
+ - Rich scripture references and extensive quotes from Church leaders
+ - Personal stories and detailed applications
  - Smooth transitions between points
  - Practical applications for daily life
+ - Expand content proportionally to fill the full ${questionnaire.duration} minutes
 
 3. TESTIMONY AND CLOSING (1-2 minutes):
- - Personal testimony related to the topic
+ - Strong personal testimony related to the topic
  - Invitation for audience to apply principles
  - Closing in the name of Jesus Christ
 
@@ -713,15 +736,19 @@ WRITING STYLE:
 - Conversational but reverent tone
 - Natural flow as if speaking to friends and family
 - Include pauses and transitions ("Now, let me share...","As I've pondered this...")
-- Personal and authentic voice`)
+- Personal and authentic voice
+- NO WORD LIMITS - Generate full content appropriate for ${questionnaire.duration} minutes of speaking
+- Aim for approximately ${targetWordCount} words to fill the full time allocation`)
 
         // Content restrictions
         promptSections.push(`CONTENT RESTRICTIONS:
-- Use ONLY official Church content from churchofjesuschrist.org
+- Use ONLY official Church content from https://www.churchofjesuschrist.org/
 - Reference scriptures, conference talks, Church manuals, and official publications
-- No external books, websites, or non-Church sources
+- STRICTLY FORBIDDEN: Any external books, websites, or non-Church sources
+- If a non-Church source is referenced, STOP generation and explain the restriction
 - Keep all content doctrinally sound and appropriate
-- Avoid controversial topics or personal opinions on Church policies`)
+- Avoid controversial topics or personal opinions on Church policies
+- VALIDATION: All references must be verifiable on churchofjesuschrist.org`)
 
         // Final formatting instructions
         promptSections.push(`FORMATTING:
@@ -811,23 +838,30 @@ export async function generateTalk(questionnaire: TalkQuestionnaire): Promise<Ap
         // Create system message for talk generation
         const systemMessage: XAIMessage = {
             role: 'system',
-            content: `You are an expert at writing LDS sacrament meeting and stake conference talks. You help members of The Church of Jesus Christ of Latter-day Saints create meaningful, doctrinally sound talks using Pulpit Pal.
+            content: `You are an expert at writing LDS sacrament meeting, stake conference, and devotional talks. You help members of The Church of Jesus Christ of Latter-day Saints create meaningful, doctrinally sound talks using Pulpit Pal.
 
 CRITICAL REQUIREMENTS:
 1. Write in first person as if the speaker is delivering personally
-2. Use ONLY official Church content from churchofjesuschrist.org domain
+2. Use ONLY official Church content from https://www.churchofjesuschrist.org/ - NO EXCEPTIONS
 3. Include smooth transitions between sections
 4. Structure: Introduction → Main points → Personal application → Testimony
 5. End with personal testimony
 6. Make it feel authentic and personal to the speaker
 7. Include specific scripture references and quotes from Church leaders
 8. Ensure the talk flows naturally when spoken aloud
+9. Generate content appropriate for the full duration specified (no artificial word limits)
+10. Use dynamic greetings appropriate for time/setting (not always "Good morning")
 
-CONTENT RESTRICTIONS:
-- Only reference content from churchofjesuschrist.org
-- No external sources, books, or non-Church materials
+STRICT CONTENT RESTRICTIONS:
+- ONLY reference content from https://www.churchofjesuschrist.org/
+- If you cannot verify a source is from churchofjesuschrist.org, DO NOT include it
+- No external sources, books, or non-Church materials whatsoever
+- If asked to reference non-Church content, refuse and explain the restriction
 - Focus on doctrine, principles, and spiritual application
 - Keep content appropriate for all ages in a Church setting
+
+PURPOSE & PHILOSOPHY:
+This tool helps members who have already done their spiritual preparation and study. The AI enhances their prepared thoughts and testimony - it does not replace personal spiritual preparation. The user has provided their own research, personal story, and Church sources, showing they have built their own testimony first.
 
 RESPONSE FORMAT:
 Provide the talk content in a clear, readable format with proper paragraphs and transitions. Include a suggested title at the beginning.`

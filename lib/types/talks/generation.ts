@@ -1,7 +1,7 @@
 // Talk generation type definitions
 // This file contains types for talk generation functionality
 
-export type MeetingType = 'sacrament' | 'stake_conference';
+export type MeetingType = 'sacrament' | 'stake_conference' | 'devotional';
 
 export interface TalkQuestionnaire {
     topic: string;

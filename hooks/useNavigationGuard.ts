@@ -94,18 +94,27 @@ export function useNavigationGuard(options: UseNavigationGuardOptions = {}) {
         }
     }, [router])
 
+    // Store callbacks in refs to avoid recreating functions
+    const onBeforeUnloadRef = useRef(onBeforeUnload)
+    const onNavigationAttemptRef = useRef(onNavigationAttempt)
+
+    useEffect(() => {
+        onBeforeUnloadRef.current = onBeforeUnload
+        onNavigationAttemptRef.current = onNavigationAttempt
+    }, [onBeforeUnload, onNavigationAttempt])
+
     // Helper function to check if navigation should be blocked
     const shouldBlockNavigation = useCallback((url?: string) => {
         if (!enabled || !stateRef.current.hasUnsavedChanges) {
             return false
         }
 
-        if (onNavigationAttempt) {
-            return !onNavigationAttempt(url || '')
+        if (onNavigationAttemptRef.current) {
+            return !onNavigationAttemptRef.current(url || '')
         }
 
         return true
-    }, [enabled, onNavigationAttempt])
+    }, [enabled])
 
     // Helper function to handle navigation attempt
     const handleNavigationAttempt = useCallback((url: string) => {
@@ -140,7 +149,7 @@ export function useNavigationGuard(options: UseNavigationGuardOptions = {}) {
         const handleBeforeUnload = (event: BeforeUnloadEvent) => {
             if (stateRef.current.hasUnsavedChanges) {
                 // Call custom handler if provided
-                if (onBeforeUnload && !onBeforeUnload()) {
+                if (onBeforeUnloadRef.current && !onBeforeUnloadRef.current()) {
                     return undefined
                 }
 
@@ -158,7 +167,7 @@ export function useNavigationGuard(options: UseNavigationGuardOptions = {}) {
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload)
         }
-    }, [enabled, warningMessage, onBeforeUnload])
+    }, [enabled, warningMessage])
 
     // Handle browser navigation (back/forward)
     useEffect(() => {
@@ -214,23 +223,29 @@ export function useTalkNavigationGuard(talk?: GeneratedTalk, originalTalk?: Gene
         )
     }, [talk, originalTalk])
 
+    // Create stable callbacks that use the current hasChanges value
+    const onBeforeUnload = useCallback(() => {
+        return !hasChanges
+    }, [hasChanges])
+
+    const onNavigationAttempt = useCallback(() => {
+        return !hasChanges
+    }, [hasChanges])
+
     const navigationGuard = useNavigationGuard({
         enabled: true,
         warningMessage: 'You have unsaved changes to your talk. Are you sure you want to leave? Your changes will be lost.',
-        onBeforeUnload: () => {
-            // Return false to show browser warning
-            return !hasChanges
-        },
-        onNavigationAttempt: () => {
-            // Return false to show custom warning dialog
-            return !hasChanges
-        }
+        onBeforeUnload,
+        onNavigationAttempt
     })
+
+    // Extract setUnsavedChanges to avoid dependency issues
+    const { setUnsavedChanges } = navigationGuard
 
     // Sync changes with navigation guard
     useEffect(() => {
-        navigationGuard.setUnsavedChanges(hasChanges)
-    }, [hasChanges, navigationGuard, navigationGuard.setUnsavedChanges])
+        setUnsavedChanges(hasChanges)
+    }, [hasChanges, setUnsavedChanges])
 
     return useMemo(() => ({
         ...navigationGuard,
@@ -245,10 +260,13 @@ export function useFormNavigationGuard(isDirty: boolean = false, customMessage?:
         warningMessage: customMessage || 'You have unsaved form changes. Are you sure you want to leave?',
     })
 
+    // Extract setUnsavedChanges to avoid dependency issues
+    const { setUnsavedChanges } = navigationGuard
+
     // Sync form dirty state with navigation guard
     useEffect(() => {
-        navigationGuard.setUnsavedChanges(isDirty)
-    }, [isDirty, navigationGuard, navigationGuard.setUnsavedChanges])
+        setUnsavedChanges(isDirty)
+    }, [isDirty, setUnsavedChanges])
 
     return navigationGuard
 }
