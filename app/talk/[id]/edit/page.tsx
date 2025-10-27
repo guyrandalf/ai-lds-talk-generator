@@ -5,14 +5,12 @@ import TalkEditClient from './TalkEditClient'
 
 
 interface EditTalkPageProps {
-    params: {
-        id: string
-    }
+    params: Promise<{ id: string }>
 }
 
 export default async function EditTalkPage({ params }: EditTalkPageProps) {
     const user = await getCurrentUser()
-    const { id } = params
+    const { id } = await params
 
     if (!user) {
         redirect('/auth/login')
