@@ -20,6 +20,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
+  // Cumulative stats (persist even when talks are deleted)
+  totalTalksGenerated Int @default(0)  // Lifetime talks created
+  totalWordsWritten   Int @default(0)  // Lifetime words written
+  longestStreak       Int @default(0)  // Best streak achieved
+  
   talks              Talk[]
   securityViolations SecurityViolation[]
   passwordResets     PasswordReset[]
@@ -32,7 +37,7 @@ model Talk {
   title       String
   content     String   @db.Text
   duration    Int      // Minutes
-  meetingType String   // "sacrament" | "stake_conference"
+  meetingType String   // Meeting type (sacrament, stake_conference, ward_conference, etc.)
   topic       String?
   
   // Questionnaire responses

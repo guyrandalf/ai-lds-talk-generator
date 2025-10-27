@@ -3,17 +3,19 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { GeneratedTalk } from '@/lib/types/talks/generation'
+import { getMeetingTypeLabel, getMeetingTypeVariant } from '@/lib/utils/meetingTypes'
 import TalkManagementActions from './TalkManagementActions'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { Clock, Tag, Calendar, Eye, MoreHorizontal, FileText, ArrowRight } from 'lucide-react'
+import { Clock, Calendar, MoreHorizontal, FileText, ArrowRight } from 'lucide-react'
 
 interface TalksListProps {
     talks: GeneratedTalk[]
+    onTalkDeleted?: () => void
 }
 
-export default function TalksList({ talks }: TalksListProps) {
+export default function TalksList({ talks, onTalkDeleted }: TalksListProps) {
     const [selectedTalk, setSelectedTalk] = useState<GeneratedTalk | null>(null)
 
     if (talks.length === 0) {
@@ -45,23 +47,27 @@ export default function TalksList({ talks }: TalksListProps) {
                     <CardContent className="p-6">
                         <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
-                                <div className="flex items-center space-x-3 mb-2">
-                                    <Badge variant={talk.meetingType === 'sacrament' ? 'default' : 'secondary'}>
-                                        {talk.meetingType === 'sacrament' ? 'Sacrament Meeting' : 'Stake Conference'}
+                                <div className="flex items-center justify-between space-x-3 mb-2">
+                                    <Badge className="rounded-xl" variant={getMeetingTypeVariant(talk.meetingType)}>
+                                        {getMeetingTypeLabel(talk.meetingType)}
                                     </Badge>
+
+                                    <Button
+                                        variant="ghost"
+                                        className="bg-gray-100 rounded-xl"
+                                        size="sm"
+                                        onClick={() => setSelectedTalk(talk)}
+                                    >
+                                        <MoreHorizontal className="w-4 h-4 mr-1" />
+                                    </Button>
                                 </div>
 
                                 <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
                                     <div className="flex items-center">
                                         <Clock className="w-4 h-4 mr-1" />
-                                        {talk.duration} minutes
+                                        {talk.duration} mins
                                     </div>
-                                    {talk.questionnaire?.topic && (
-                                        <div className="flex items-center">
-                                            <Tag className="w-4 h-4 mr-1" />
-                                            {talk.questionnaire.topic}
-                                        </div>
-                                    )}
+
                                     {talk.createdAt && (
                                         <div className="flex items-center">
                                             <Calendar className="w-4 h-4 mr-1" />
@@ -69,7 +75,7 @@ export default function TalksList({ talks }: TalksListProps) {
                                         </div>
                                     )}
                                 </div>
-                                <h4 className="text-lg font-semibold truncate">
+                                <h4 className="text-lg font-semibold">
                                     {talk.title}
                                 </h4>
 
@@ -78,23 +84,7 @@ export default function TalksList({ talks }: TalksListProps) {
                                 </p>
                             </div>
 
-                            <div className="flex items-center space-x-2 ml-4">
-                                <Button variant="outline" size="sm" asChild>
-                                    <Link href={`/talk/${talk.id}`}>
-                                        <Eye className="w-4 h-4 mr-1" />
-                                        View
-                                    </Link>
-                                </Button>
 
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setSelectedTalk(talk)}
-                                >
-                                    <MoreHorizontal className="w-4 h-4 mr-1" />
-                                    Manage
-                                </Button>
-                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -105,6 +95,7 @@ export default function TalksList({ talks }: TalksListProps) {
                 <TalkManagementActions
                     talk={selectedTalk}
                     onClose={() => setSelectedTalk(null)}
+                    onTalkDeleted={onTalkDeleted}
                 />
             )}
         </div>

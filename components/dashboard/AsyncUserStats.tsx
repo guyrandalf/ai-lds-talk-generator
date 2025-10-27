@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { getUserSavedTalks } from '@/lib/actions/talks'
 import { DashboardStatsSkeleton } from '@/components/ui/SkeletonLoaders'
@@ -8,17 +9,12 @@ import { GeneratedTalk } from '@/lib/types/talks/generation'
 import GamifiedStats from './GamifiedStats'
 
 interface AsyncUserStatsProps {
-    initialTalks?: GeneratedTalk[]
+    // No props needed - always fetch fresh data
 }
 
-export default function AsyncUserStats({ initialTalks = [] }: AsyncUserStatsProps) {
-    const { data: talks, isLoading, error } = useAsyncData(
+export default function AsyncUserStats() {
+    const { data: talks, isLoading, error, refetch } = useAsyncData(
         async (): Promise<GeneratedTalk[]> => {
-            // Use initial talks if available to avoid unnecessary API call
-            if (initialTalks.length > 0) {
-                return initialTalks
-            }
-
             const result = await getUserSavedTalks()
             if (!result.success) {
                 throw new Error(result.error || 'Failed to load user talks')
@@ -26,13 +22,23 @@ export default function AsyncUserStats({ initialTalks = [] }: AsyncUserStatsProp
 
             return result.data || []
         },
-        [initialTalks],
+        [], // Always fetch fresh data
         {
             onError: (error) => {
                 toast.error('Failed to load statistics: ' + error.message)
             }
         }
     )
+
+    // Listen for talks changes from other components
+    React.useEffect(() => {
+        const handleTalksChanged = () => {
+            refetch()
+        }
+
+        window.addEventListener('talksChanged', handleTalksChanged)
+        return () => window.removeEventListener('talksChanged', handleTalksChanged)
+    }, [refetch])
 
     if (isLoading) {
         return <DashboardStatsSkeleton />

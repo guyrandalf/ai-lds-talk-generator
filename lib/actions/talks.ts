@@ -7,6 +7,7 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Unde
 import { sanitizeFormData } from '../security/inputSanitization'
 import { ApiResponse, ValidationResponse } from '../types/api/responses'
 import { ProcessedQuestionnaireResult, TalkQuestionnaire, GeneratedTalk, ChurchSource, MeetingType, TalkPreferences, DatabaseTalk } from '../types/talks/generation'
+import { getMeetingTypeLabel } from '../utils/meetingTypes'
 import { ReceivedTalkDetails, ShareStatus, SharedTalkDetails } from '../types/talks/sharing'
 
 
@@ -90,7 +91,7 @@ export async function processQuestionnaire(formData: FormData): Promise<ApiRespo
         const rawData = {
             topic: sanitizationResult.sanitizedData.topic,
             duration: parseInt(formData.get('duration') as string) || 15,
-            meetingType: formData.get('meetingType') as 'sacrament' | 'stake_conference',
+            meetingType: formData.get('meetingType') as string,
             personalStory: sanitizationResult.sanitizedData.personalStory || undefined,
             audienceType: sanitizationResult.sanitizedData.audienceType || undefined,
             speakerAge: formData.get('speakerAge') as string || undefined,
@@ -576,6 +577,13 @@ This is for a stake conference. Focus on:
 - More formal but still personal tone
 - Universal gospel principles
 - Inspiring and uplifting message`)
+        } else if (questionnaire.meetingType === 'ward_conference') {
+            promptSections.push(`MEETING CONTEXT:
+This is for a ward conference. Focus on:
+- Ward-specific themes and goals
+- Unity and strengthening of the ward
+- Practical application for ward members
+- Encouraging and motivating message`)
         } else if (questionnaire.meetingType.includes('devotional') || questionnaire.meetingType.includes('fireside')) {
             promptSections.push(`MEETING CONTEXT:
 This is for a devotional or fireside. Focus on:
@@ -583,6 +591,28 @@ This is for a devotional or fireside. Focus on:
 - Personal spiritual insights and testimony
 - Practical application of gospel principles
 - Intimate and heartfelt tone appropriate for a devotional setting`)
+        } else if (questionnaire.meetingType === 'primary') {
+            promptSections.push(`MEETING CONTEXT:
+This is for Primary children (ages 3-11). Focus on:
+- Simple, age-appropriate language and concepts
+- Interactive elements and visual examples
+- Basic gospel principles
+- Short attention span considerations`)
+        } else if (questionnaire.meetingType === 'young_men_women') {
+            promptSections.push(`MEETING CONTEXT:
+This is for youth (ages 12-18). Focus on:
+- Relevant to teenage experiences and challenges
+- Practical application for daily life
+- Inspiring and motivating tone
+- Examples they can relate to`)
+        } else {
+            // Default context for other meeting types
+            promptSections.push(`MEETING CONTEXT:
+This is for a ${getMeetingTypeLabel(questionnaire.meetingType)}. Focus on:
+- Appropriate tone and content for the specific meeting type
+- Spiritual edification and testimony
+- Practical application of gospel principles
+- Inspiring and uplifting message`)
         }
 
         // Audience specification
@@ -653,7 +683,7 @@ Since no specific personal story was provided, please:
             promptSections.push(`REQUIRED GOSPEL LIBRARY REFERENCES:
 ${questionnaire.gospelLibraryLinks.map((link: string) => `- ${link}`).join('\n')}
 
-CRITICAL: You MUST reference and quote from these specific sources provided by the user. These represent their personal study and preparation. Include these links in the final sources section of the talk.`)
+`)
         }
 
         // Specific scriptures
@@ -757,11 +787,7 @@ WRITING STYLE:
 - If emphasis is needed, use italics or ALL CAPS sparingly, or rely on natural speech patterns
 
 SOURCES SECTION REQUIREMENT:
-At the end of your talk, include a "Sources" section that lists:
-1. ALL user-provided Gospel Library links exactly as given
-2. ALL scriptures you referenced in the talk
-3. ALL Church leader quotes and their sources from churchofjesuschrist.org
-Format: Simple bulleted list with full URLs for Gospel Library sources`)
+1. Notice how the url to scripture are like this: https://www.churchofjesuschrist.org/study/scriptures/bofm/alma/8?lang=eng&id=p1-p3#p1 (this is for highlighted scripture of alma 8 1 to 3) and see another example: https://www.churchofjesuschrist.org/study/scriptures/bofm/alma/8 (for alma chapter 8), something like those are the accepted links for the scriptures. If you do something like this: https://www.churchofjesuschrist.org/study/scriptures/bofm/alma-8:1-3 it either goes to a dead end or to just another page. Same for other scriptures, e.g https://www.churchofjesuschrist.org/study/scriptures/nt/john/6?lang=eng`)
 
         // Content restrictions
         promptSections.push(`CONTENT RESTRICTIONS:
@@ -889,12 +915,7 @@ FORMATTING REQUIREMENTS:
 - Never use **bold** or *italic* markdown syntax
 - Keep formatting simple and readable
 
-SOURCES SECTION MANDATORY:
-Every talk MUST end with a "Sources" section containing:
-1. ALL user-provided Gospel Library links (exactly as provided)
-2. ALL scriptures referenced in the talk
-3. ALL Church leader quotes with their churchofjesuschrist.org sources
-Format as a simple bulleted list with full URLs
+
 
 STRICT CONTENT RESTRICTIONS:
 - ONLY reference content from https://www.churchofjesuschrist.org/
@@ -1502,7 +1523,7 @@ export async function exportTalkToWord(talk: GeneratedTalk): Promise<{
         // Talk metadata
         const metadataText = [
             `Duration: ${talk.duration} minutes`,
-            `Meeting Type: ${talk.meetingType === 'sacrament' ? 'Sacrament Meeting' : 'Stake Conference'}`,
+            `Meeting Type: ${getMeetingTypeLabel(talk.meetingType)}`,
             talk.createdAt ? `Generated: ${new Date(talk.createdAt).toLocaleDateString()}` : ''
         ].filter(Boolean).join(' • ')
 
@@ -1725,26 +1746,45 @@ export async function saveTalkToDatabase(talk: GeneratedTalk): Promise<ApiRespon
         const prisma = new PrismaClient()
 
         try {
-            // Create talk record
-            const savedTalk = await prisma.talk.create({
-                data: {
-                    title: talk.title,
-                    content: talk.content,
-                    duration: talk.duration,
-                    meetingType: talk.meetingType,
-                    topic: talk.questionnaire?.topic || null,
-                    personalStory: talk.questionnaire?.personalStory || null,
-                    gospelLibraryLinks: talk.questionnaire?.gospelLibraryLinks || [],
-                    audienceContext: talk.questionnaire?.audienceContext || null,
-                    customThemes: talk.questionnaire?.customThemes || [],
-                    preferences: talk.questionnaire ? {
-                        audienceType: talk.questionnaire.audienceType || null,
-                        preferredThemes: talk.questionnaire.preferredThemes || [],
-                        specificScriptures: talk.questionnaire.specificScriptures || []
-                    } : undefined,
-                    userId: session.userId
-                }
+            // Calculate word count for cumulative stats
+            const wordCount = talk.content.split(/\s+/).length
+
+            // Use transaction to create talk and update user stats atomically
+            const result = await prisma.$transaction(async (tx) => {
+                // Create talk record
+                const savedTalk = await tx.talk.create({
+                    data: {
+                        title: talk.title,
+                        content: talk.content,
+                        duration: talk.duration,
+                        meetingType: talk.meetingType,
+                        topic: talk.questionnaire?.topic || null,
+                        personalStory: talk.questionnaire?.personalStory || null,
+                        gospelLibraryLinks: talk.questionnaire?.gospelLibraryLinks || [],
+                        audienceContext: talk.questionnaire?.audienceContext || null,
+                        customThemes: talk.questionnaire?.customThemes || [],
+                        preferences: talk.questionnaire ? {
+                            audienceType: talk.questionnaire.audienceType || null,
+                            preferredThemes: talk.questionnaire.preferredThemes || [],
+                            specificScriptures: talk.questionnaire.specificScriptures || []
+                        } : undefined,
+                        userId: session.userId
+                    }
+                })
+
+                // Update user's cumulative stats
+                await tx.user.update({
+                    where: { id: session.userId },
+                    data: {
+                        totalTalksGenerated: { increment: 1 },
+                        totalWordsWritten: { increment: wordCount }
+                    }
+                })
+
+                return savedTalk
             })
+
+            const savedTalk = result
 
             console.log('Talk saved successfully', {
                 talkId: savedTalk.id,
@@ -1769,6 +1809,235 @@ export async function saveTalkToDatabase(talk: GeneratedTalk): Promise<ApiRespon
 }
 
 /**
+ * Retrieves user cumulative stats for achievements
+ */
+export async function getUserCumulativeStats(): Promise<ApiResponse<{
+    totalTalksGenerated: number
+    totalWordsWritten: number
+    longestStreak: number
+}>> {
+    try {
+        const session = await getSession()
+
+        if (!session?.userId) {
+            return {
+                success: false,
+                error: 'User must be authenticated to view stats'
+            }
+        }
+
+        const { PrismaClient } = await import('@prisma/client')
+        const prisma = new PrismaClient()
+
+        try {
+            const user = await prisma.user.findUnique({
+                where: { id: session.userId },
+                select: {
+                    totalTalksGenerated: true,
+                    totalWordsWritten: true,
+                    longestStreak: true
+                }
+            })
+
+            if (!user) {
+                return {
+                    success: false,
+                    error: 'User not found'
+                }
+            }
+
+            return {
+                success: true,
+                data: user
+            }
+        } finally {
+            await prisma.$disconnect()
+        }
+    } catch (error) {
+        console.error('Get user stats error:', error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to get user stats'
+        }
+    }
+}
+
+/**
+ * Retrieves recent saved talks for the current authenticated user (limited for dashboard)
+ */
+export async function getUserRecentTalks(limit: number = 3): Promise<ApiResponse<GeneratedTalk[]>> {
+    try {
+        const session = await getSession()
+
+        if (!session?.userId) {
+            return {
+                success: false,
+                error: 'User must be authenticated to view saved talks'
+            }
+        }
+
+        const { PrismaClient } = await import('@prisma/client')
+        const prisma = new PrismaClient()
+
+        try {
+            // Fetch user's recent talks with limit
+            const savedTalks = await prisma.talk.findMany({
+                where: {
+                    userId: session.userId
+                },
+                orderBy: {
+                    createdAt: 'desc'
+                },
+                take: limit
+            })
+
+            console.log(`getUserRecentTalks: Found ${savedTalks.length} talks (limit: ${limit}) for user ${session.userId}`)
+
+            // Convert database records to GeneratedTalk format
+            const talks: GeneratedTalk[] = savedTalks.map((talk) => ({
+                id: talk.id,
+                title: talk.title,
+                content: talk.content,
+                duration: talk.duration,
+                meetingType: talk.meetingType as MeetingType,
+                sources: [], // Sources would need to be extracted from content or stored separately
+                questionnaire: {
+                    topic: talk.topic || '',
+                    duration: talk.duration,
+                    meetingType: talk.meetingType as MeetingType,
+                    personalStory: talk.personalStory || '', // Convert null to empty string
+                    gospelLibraryLinks: talk.gospelLibraryLinks,
+                    audienceType: (talk.preferences as TalkPreferences)?.audienceType,
+                    speakerAge: '', // Not stored in preferences currently
+                    preferredThemes: (talk.preferences as TalkPreferences)?.preferredThemes || [],
+                    customThemes: talk.customThemes,
+                    audienceContext: talk.audienceContext || '',
+                    specificScriptures: (talk.preferences as TalkPreferences)?.specificScriptures || []
+                },
+                createdAt: talk.createdAt
+            }))
+
+            return {
+                success: true,
+                data: talks
+            }
+        } finally {
+            await prisma.$disconnect()
+        }
+    } catch (error) {
+        console.error('Get recent talks error:', error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to get recent talks'
+        }
+    }
+}
+
+/**
+ * Retrieves paginated talks for the current authenticated user with search
+ */
+export async function getUserTalksPaginated(
+    page: number = 1,
+    limit: number = 10,
+    search?: string
+): Promise<ApiResponse<{
+    talks: GeneratedTalk[]
+    totalCount: number
+    hasMore: boolean
+}>> {
+    try {
+        const session = await getSession()
+
+        if (!session?.userId) {
+            return {
+                success: false,
+                error: 'User must be authenticated to view saved talks'
+            }
+        }
+
+        const { PrismaClient } = await import('@prisma/client')
+        const prisma = new PrismaClient()
+
+        try {
+            const skip = (page - 1) * limit
+
+            // Build search conditions
+            const searchConditions = search ? {
+                OR: [
+                    { title: { contains: search, mode: 'insensitive' as const } },
+                    { content: { contains: search, mode: 'insensitive' as const } },
+                    { topic: { contains: search, mode: 'insensitive' as const } }
+                ]
+            } : {}
+
+            const whereClause = {
+                userId: session.userId,
+                ...searchConditions
+            }
+
+            // Get total count for pagination
+            const totalCount = await prisma.talk.count({
+                where: whereClause
+            })
+
+            // Fetch paginated talks
+            const savedTalks = await prisma.talk.findMany({
+                where: whereClause,
+                orderBy: {
+                    createdAt: 'desc'
+                },
+                skip,
+                take: limit
+            })
+
+            console.log(`getUserTalksPaginated: Found ${savedTalks.length} talks (page ${page}, limit ${limit}) for user ${session.userId}`)
+
+            // Convert database records to GeneratedTalk format
+            const talks: GeneratedTalk[] = savedTalks.map((talk) => ({
+                id: talk.id,
+                title: talk.title,
+                content: talk.content,
+                duration: talk.duration,
+                meetingType: talk.meetingType as MeetingType,
+                sources: [],
+                questionnaire: {
+                    topic: talk.topic || '',
+                    duration: talk.duration,
+                    meetingType: talk.meetingType as MeetingType,
+                    personalStory: talk.personalStory || '',
+                    gospelLibraryLinks: talk.gospelLibraryLinks,
+                    audienceType: (talk.preferences as TalkPreferences)?.audienceType,
+                    preferredThemes: (talk.preferences as TalkPreferences)?.preferredThemes || [],
+                    customThemes: talk.customThemes,
+                    audienceContext: talk.audienceContext || '',
+                    specificScriptures: (talk.preferences as TalkPreferences)?.specificScriptures || []
+                },
+                createdAt: talk.createdAt
+            }))
+
+            const hasMore = skip + savedTalks.length < totalCount
+
+            return {
+                success: true,
+                data: {
+                    talks,
+                    totalCount,
+                    hasMore
+                }
+            }
+        } finally {
+            await prisma.$disconnect()
+        }
+    } catch (error) {
+        console.error('Get paginated talks error:', error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to get talks'
+        }
+    }
+}
+
+/**
  * Retrieves saved talks for the current authenticated user
  */
 export async function getUserSavedTalks(): Promise<ApiResponse<GeneratedTalk[]>> {
@@ -1783,16 +2052,16 @@ export async function getUserSavedTalks(): Promise<ApiResponse<GeneratedTalk[]>>
             }
         }
 
-        // Try to get talks from cache first
-        const { getCachedUserTalks, setCachedUserTalks } = await import('../cache/queryCache')
-        const cachedTalks = await getCachedUserTalks(session.userId)
+        // Skip cache for now to ensure fresh data
+        // const { getCachedUserTalks, setCachedUserTalks } = await import('../cache/queryCache')
+        // const cachedTalks = await getCachedUserTalks(session.userId)
 
-        if (cachedTalks) {
-            return {
-                success: true,
-                data: cachedTalks as GeneratedTalk[]
-            }
-        }
+        // if (cachedTalks) {
+        //     return {
+        //         success: true,
+        //         data: cachedTalks as GeneratedTalk[]
+        //     }
+        // }
 
         // Import Prisma client
         const { PrismaClient } = await import('@prisma/client')
@@ -1809,6 +2078,8 @@ export async function getUserSavedTalks(): Promise<ApiResponse<GeneratedTalk[]>>
                 }
             })
 
+            console.log(`getUserSavedTalks: Found ${savedTalks.length} talks for user ${session.userId}`)
+
             // Convert database records to GeneratedTalk format
             const talks: GeneratedTalk[] = savedTalks.map((talk) => ({
                 id: talk.id,
@@ -1820,7 +2091,7 @@ export async function getUserSavedTalks(): Promise<ApiResponse<GeneratedTalk[]>>
                 questionnaire: {
                     topic: talk.topic || '',
                     duration: talk.duration,
-                    meetingType: talk.meetingType as 'sacrament' | 'stake_conference',
+                    meetingType: talk.meetingType as MeetingType,
                     personalStory: talk.personalStory || '', // Convert null to empty string
                     gospelLibraryLinks: talk.gospelLibraryLinks,
                     audienceType: (talk.preferences as TalkPreferences)?.audienceType,
@@ -1832,8 +2103,8 @@ export async function getUserSavedTalks(): Promise<ApiResponse<GeneratedTalk[]>>
                 createdAt: talk.createdAt
             }))
 
-            // Cache the talks for 10 minutes
-            await setCachedUserTalks(session.userId, talks, 10 * 60)
+            // Cache disabled for now to ensure fresh data
+            // await setCachedUserTalks(session.userId, talks, 10 * 60)
 
             return {
                 success: true,

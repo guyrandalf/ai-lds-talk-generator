@@ -49,7 +49,7 @@ export default function TalkEditForm({ talk }: TalkEditFormProps) {
                     ...talk.questionnaire,
                     topic,
                     duration,
-                    meetingType: meetingType as 'sacrament' | 'stake_conference'
+                    meetingType: meetingType
                 }
             }
 

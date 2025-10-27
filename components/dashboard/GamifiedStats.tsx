@@ -1,11 +1,18 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import { GeneratedTalk } from '@/lib/types/talks/generation'
+import { getUserCumulativeStats } from '@/lib/actions/talks'
 import { Trophy, Target, Zap, BookOpen, Award, Star, TrendingUp } from 'lucide-react'
 
 interface GamifiedStatsProps {
     talks: GeneratedTalk[]
+}
+
+interface CumulativeStats {
+    totalTalksGenerated: number
+    totalWordsWritten: number
+    longestStreak: number
 }
 
 interface Achievement {
@@ -30,49 +37,88 @@ interface UserStats {
 }
 
 export default function GamifiedStats({ talks }: GamifiedStatsProps) {
+    const [cumulativeStats, setCumulativeStats] = useState<CumulativeStats>({
+        totalTalksGenerated: 0,
+        totalWordsWritten: 0,
+        longestStreak: 0
+    })
+
+    // Fetch cumulative stats on component mount and when talks change
+    useEffect(() => {
+        const fetchStats = async () => {
+            const result = await getUserCumulativeStats()
+            if (result.success && result.data) {
+                setCumulativeStats(result.data)
+            }
+        }
+        fetchStats()
+    }, [talks])
+
+    // Listen for talks changes from other components
+    useEffect(() => {
+        const handleTalksChanged = () => {
+            // Refetch stats when talks change
+            const fetchStats = async () => {
+                const result = await getUserCumulativeStats()
+                if (result.success && result.data) {
+                    setCumulativeStats(result.data)
+                }
+            }
+            fetchStats()
+        }
+
+        window.addEventListener('talksChanged', handleTalksChanged)
+        return () => window.removeEventListener('talksChanged', handleTalksChanged)
+    }, [])
+
     const stats = useMemo((): UserStats => {
-        const totalTalks = talks.length
-        const totalWords = talks.reduce((sum, talk) => {
+        // Current active talks and words
+        const currentTalks = talks.length
+        const currentWords = talks.reduce((sum, talk) => {
             return sum + (talk.content?.split(/\s+/).length || 0)
         }, 0)
 
-        // Calculate XP (100 XP per talk + 1 XP per 10 words)
-        const xp = (totalTalks * 100) + Math.floor(totalWords / 10)
+        // Use database cumulative stats for achievements and XP
+        const persistentTalks = cumulativeStats.totalTalksGenerated
+        const persistentWords = cumulativeStats.totalWordsWritten
+
+        // Calculate XP based on persistent stats for achievements
+        const xp = (persistentTalks * 100) + Math.floor(persistentWords / 10)
 
         // Calculate level (every 500 XP = 1 level)
         const level = Math.floor(xp / 500) + 1
         const xpToNext = 500 - (xp % 500)
 
-        // Calculate streak (simplified - based on recent talks)
-        const streak = Math.min(totalTalks, 7) // Max streak of 7 for demo
+        // Calculate streak (simplified - based on current talks)
+        const streak = Math.min(currentTalks, 7) // Max streak of 7 for demo
 
-        // Define achievements
+        // Define achievements using persistent stats
         const achievements: Achievement[] = [
             {
                 id: 'first_talk',
                 title: 'First Steps',
                 description: 'Generate your first talk',
                 icon: <BookOpen className="w-5 h-5" />,
-                unlocked: totalTalks >= 1,
+                unlocked: persistentTalks >= 1,
                 color: 'bg-green-500'
             },
             {
                 id: 'prolific_writer',
                 title: 'Prolific Writer',
-                description: 'Generate 5 talks',
+                description: 'Generate 5 talks (lifetime)',
                 icon: <Trophy className="w-5 h-5" />,
-                unlocked: totalTalks >= 5,
-                progress: Math.min(totalTalks, 5),
+                unlocked: persistentTalks >= 5,
+                progress: Math.min(persistentTalks, 5),
                 maxProgress: 5,
                 color: 'bg-blue-500'
             },
             {
                 id: 'word_master',
                 title: 'Word Master',
-                description: 'Write 10,000 words total',
+                description: 'Write 10,000 words (lifetime)',
                 icon: <Zap className="w-5 h-5" />,
-                unlocked: totalWords >= 10000,
-                progress: Math.min(totalWords, 10000),
+                unlocked: persistentWords >= 10000,
+                progress: Math.min(persistentWords, 10000),
                 maxProgress: 10000,
                 color: 'bg-purple-500'
             },
@@ -89,10 +135,10 @@ export default function GamifiedStats({ talks }: GamifiedStatsProps) {
             {
                 id: 'talk_veteran',
                 title: 'Talk Veteran',
-                description: 'Generate 10 talks',
+                description: 'Generate 10 talks (lifetime)',
                 icon: <Award className="w-5 h-5" />,
-                unlocked: totalTalks >= 10,
-                progress: Math.min(totalTalks, 10),
+                unlocked: persistentTalks >= 10,
+                progress: Math.min(persistentTalks, 10),
                 maxProgress: 10,
                 color: 'bg-red-500'
             },
@@ -112,12 +158,12 @@ export default function GamifiedStats({ talks }: GamifiedStatsProps) {
             level,
             xp,
             xpToNext,
-            totalTalks,
-            totalWords,
+            totalTalks: currentTalks, // Show current active talks
+            totalWords: currentWords, // Show current active words
             streak,
             achievements
         }
-    }, [talks])
+    }, [talks, cumulativeStats])
 
     return (
         <div className="space-y-6">
@@ -147,6 +193,24 @@ export default function GamifiedStats({ talks }: GamifiedStatsProps) {
                 </div>
             </div>
 
+            {/* Stats Explanation */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex items-start space-x-3">
+                    <div className="w-5 h-5 text-blue-600 mt-0.5">
+                        <svg fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p className="text-sm text-blue-800 font-medium">About Your Stats</p>
+                        <p className="text-xs text-blue-700 mt-1">
+                            Your level and achievements are based on lifetime progress and won&apos;t decrease when you delete talks.
+                            The talk and word counts below show your currently active content.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             {/* Quick Stats */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white rounded-xl p-4 border border-gray-100">
@@ -156,7 +220,10 @@ export default function GamifiedStats({ talks }: GamifiedStatsProps) {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-gray-900">{stats.totalTalks}</p>
-                            <p className="text-sm text-gray-500">Talks Created</p>
+                            <p className="text-sm text-gray-500">Active Talks</p>
+                            {cumulativeStats.totalTalksGenerated > stats.totalTalks && (
+                                <p className="text-xs text-gray-400">{cumulativeStats.totalTalksGenerated} created total</p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -168,7 +235,10 @@ export default function GamifiedStats({ talks }: GamifiedStatsProps) {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-gray-900">{stats.streak}</p>
-                            <p className="text-sm text-gray-500">Day Streak</p>
+                            <p className="text-sm text-gray-500">Current Streak</p>
+                            {cumulativeStats.longestStreak > stats.streak && (
+                                <p className="text-xs text-gray-400">Best: {cumulativeStats.longestStreak}</p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -180,7 +250,10 @@ export default function GamifiedStats({ talks }: GamifiedStatsProps) {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-gray-900">{stats.totalWords.toLocaleString()}</p>
-                            <p className="text-sm text-gray-500">Words Written</p>
+                            <p className="text-sm text-gray-500">Active Words</p>
+                            {cumulativeStats.totalWordsWritten > stats.totalWords && (
+                                <p className="text-xs text-gray-400">{cumulativeStats.totalWordsWritten.toLocaleString()} written total</p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -210,8 +283,8 @@ export default function GamifiedStats({ talks }: GamifiedStatsProps) {
                         <div
                             key={achievement.id}
                             className={`flex items-center space-x-4 p-3 rounded-lg transition-all ${achievement.unlocked
-                                    ? 'bg-green-50 border border-green-200'
-                                    : 'bg-gray-50 border border-gray-200'
+                                ? 'bg-green-50 border border-green-200'
+                                : 'bg-gray-50 border border-gray-200'
                                 }`}
                         >
                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white ${achievement.unlocked ? achievement.color : 'bg-gray-400'

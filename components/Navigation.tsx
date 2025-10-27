@@ -7,10 +7,12 @@ import { useNavigation } from '@/hooks/useNavigation'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { BookOpen } from 'lucide-react'
+import { usePathname } from 'next/navigation'
 
 function Navigation() {
     const { user, loading } = useAuth()
     const { isMobileMenuOpen, toggleMobileMenu } = useNavigation()
+    const pathname = usePathname()
 
     if (loading) {
         return (
@@ -59,17 +61,20 @@ function Navigation() {
                             <>
                                 <div className="flex items-center space-x-6">
                                     <Button variant="ghost" asChild>
-                                        <Link href="/dashboard" className="text-gray-700 hover:text-blue-600 font-medium">
+                                        <Link href="/dashboard"
+                                            className={`${pathname === '/dashboard' ? 'text-blue-500 font-bold' : 'text-gray-700'} hover:text-blue-600 active font-medium`}>
                                             Dashboard
                                         </Link>
                                     </Button>
                                     <Button variant="ghost" asChild>
-                                        <Link href="/shared-talks" className="text-gray-700 hover:text-blue-600 font-medium">
+                                        <Link href="/shared-talks"
+                                            className={`${pathname === '/shared-talks' ? 'text-blue-500 font-bold' : 'text-gray-700'} hover:text-blue-600 active font-medium`}>
                                             Shared Talks
                                         </Link>
                                     </Button>
                                     <Button variant="ghost" asChild>
-                                        <Link href="/settings" className="text-gray-700 hover:text-blue-600 font-medium">
+                                        <Link href="/settings"
+                                            className={`${pathname === '/settings' ? 'text-blue-500 font-bold' : 'text-gray-700'} hover:text-blue-600 active font-medium`}>
                                             Settings
                                         </Link>
                                     </Button>

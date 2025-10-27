@@ -1,7 +1,7 @@
 'use client'
 
 import { useAsyncData } from '@/hooks/useAsyncData'
-import { getUserSavedTalks } from '@/lib/actions/talks'
+import { getUserSavedTalks, getUserRecentTalks } from '@/lib/actions/talks'
 import { GeneratedTalk } from '@/lib/types/talks/generation'
 import TalksList from '@/components/TalksList'
 import { TalkListSkeleton } from '@/components/ui/SkeletonLoaders'
@@ -9,12 +9,13 @@ import { toast } from 'sonner'
 
 interface AsyncTalksListProps {
     initialTalks?: GeneratedTalk[]
+    limit?: number // For dashboard vs full page
 }
 
-export default function AsyncTalksList({ initialTalks = [] }: AsyncTalksListProps) {
+export default function AsyncTalksList({ initialTalks = [], limit }: AsyncTalksListProps) {
     const { data: talks, isLoading, error, refetch } = useAsyncData(
         async () => {
-            const result = await getUserSavedTalks()
+            const result = limit ? await getUserRecentTalks(limit) : await getUserSavedTalks()
             if (!result.success) {
                 throw new Error(result.error || 'Failed to load talks')
             }
@@ -52,5 +53,12 @@ export default function AsyncTalksList({ initialTalks = [] }: AsyncTalksListProp
         )
     }
 
-    return <TalksList talks={talks || []} />
+    return <TalksList
+        talks={talks || []}
+        onTalkDeleted={() => {
+            refetch()
+            // Notify stats component to refresh
+            window.dispatchEvent(new CustomEvent('talksChanged'))
+        }}
+    />
 }

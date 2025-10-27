@@ -5,10 +5,10 @@
  * Base user interface containing core user properties
  */
 export interface BaseUser {
- id: string
- email: string
- firstName: string
- lastName: string
+    id: string
+    email: string
+    firstName: string
+    lastName: string
 }
 
 /**
@@ -16,8 +16,8 @@ export interface BaseUser {
  * Used for users who have been authenticated and have full access
  */
 export interface AuthenticatedUser extends BaseUser {
- createdAt?: Date
- updatedAt?: Date
+    createdAt?: Date
+    updatedAt?: Date
 }
 
 /**
@@ -25,14 +25,14 @@ export interface AuthenticatedUser extends BaseUser {
  * Extends BaseUser with optional preference settings
  */
 export interface UserProfile extends BaseUser {
- preferences?: UserPreferences
+    preferences?: UserPreferences
 }
 
 /**
  * User preferences interface for storing user-specific settings
  */
 export interface UserPreferences {
- defaultMeetingType?: 'sacrament' | 'stake_conference'
- preferredThemes?: string[]
- audienceType?: string
+    defaultMeetingType?: string
+    preferredThemes?: string[]
+    audienceType?: string
 }

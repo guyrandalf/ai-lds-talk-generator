@@ -467,7 +467,24 @@ async function validateBasicFields(fields: {
     }
 
     // Validate meeting type
-    const validMeetingTypes = ['sacrament', 'stake_conference']
+    const validMeetingTypes = [
+        // Regular Ward Meetings
+        'sacrament',
+        'sunday_school',
+        'priesthood_relief_society',
+        'primary',
+        'young_men_women',
+
+        // Special Meetings
+        'stake_conference',
+        'ward_conference',
+        'area_devotional',
+        'ysa_devotional',
+        'youth_fireside',
+        'mission_conference',
+        'senior_devotional',
+        'general_fireside'
+    ]
     if (!validMeetingTypes.includes(fields.meetingType)) {
         errors.push('Invalid meeting type')
     } else {

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { GeneratedTalk, ChurchSource } from '@/lib/types/talks/generation'
+import { getMeetingTypeLabel } from '@/lib/utils/meetingTypes'
 import { BaseComponentProps, FileActionProps, AuthContextProps } from '@/lib/types/components/common'
 
 
@@ -33,14 +34,42 @@ export default function TalkDisplay({
             // Check if this is a transition phrase or connector
             const isTransition = /^(Now,|As I|Let me|I would like to|In conclusion|Finally,|Brothers and sisters,)/i.test(paragraph)
 
+            // Check if this paragraph contains sources/references
+            const isSource = /^(Source:|References?:|See also:|From:|Available at:)/i.test(paragraph) ||
+                paragraph.includes('churchofjesuschrist.org') ||
+                paragraph.includes('lds.org') ||
+                /^\[.*\]$/.test(paragraph)
+
+            // Format URLs to be more responsive
+            const formatUrls = (text: string) => {
+                // Replace long URLs with clickable, wrapped links
+                return text.replace(
+                    /(https?:\/\/[^\s]+)/g,
+                    '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline break-all">$1</a>'
+                )
+            }
+
+            if (isSource) {
+                return (
+                    <div
+                        key={index}
+                        className="mb-4 p-3 bg-gray-50 rounded-lg border-l-4 border-blue-200"
+                    >
+                        <p
+                            className="text-sm text-gray-600 leading-relaxed break-words"
+                            dangerouslySetInnerHTML={{ __html: formatUrls(paragraph) }}
+                        />
+                    </div>
+                )
+            }
+
             return (
                 <p
                     key={index}
-                    className={`mb-4 leading-relaxed ${isTransition ? 'font-medium text-gray-800' : 'text-gray-700'
+                    className={`mb-4 leading-relaxed break-words ${isTransition ? 'font-medium text-gray-800' : 'text-gray-700'
                         }`}
-                >
-                    {paragraph}
-                </p>
+                    dangerouslySetInnerHTML={{ __html: formatUrls(paragraph) }}
+                />
             )
         })
     }
@@ -72,7 +101,7 @@ export default function TalkDisplay({
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
-                                    {talk.meetingType === 'sacrament' ? 'Sacrament Meeting' : 'Stake Conference'}
+                                    {getMeetingTypeLabel(talk.meetingType)}
                                 </div>
                                 <div className="flex items-center">
                                     <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,8 +182,8 @@ export default function TalkDisplay({
                 {/* Talk Content */}
                 <div className="px-8 py-8">
                     {/* Content Display */}
-                    <div className="prose prose-lg max-w-none">
-                        <div className="text-gray-900 font-serif leading-relaxed text-lg">
+                    <div className="prose prose-lg max-w-none overflow-hidden">
+                        <div className="text-gray-900 font-serif leading-relaxed text-lg break-words">
                             {formatTalkContent(talk.content)}
                         </div>
                     </div>
