@@ -392,7 +392,7 @@ export default function TalkQuestionnaire({
     return (
         <div className="max-w-4xl mx-auto">
             <FormLoadingOverlay isLoading={isLoading} loadingText="Generating your talk...">
-                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 py-4">
                     {/* Header */}
                     <div className="text-center mb-8">
                         <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -404,9 +404,9 @@ export default function TalkQuestionnaire({
                         <p className="text-gray-600 text-lg">Help us create a meaningful talk that reflects your voice and testimony</p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-8">
+                    <form onSubmit={handleSubmit}>
                         {/* Basic Information */}
-                        <div className="bg-gray-50 rounded-xl p-6">
+                        <div className="bg-gray-50 p-6">
                             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                                 <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -545,7 +545,7 @@ export default function TalkQuestionnaire({
                         </div>
 
                         {/* Personal Story - Now Required */}
-                        <div className="bg-green-50 rounded-xl p-6 border-2 border-green-200">
+                        <div className="bg-green-50 p-6">
                             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                                 <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -608,7 +608,7 @@ export default function TalkQuestionnaire({
                         </div>
 
                         {/* Gospel Library Links - Now Required */}
-                        <div className="bg-purple-50 rounded-xl p-6 border-2 border-purple-200">
+                        <div className="bg-purple-50 p-6">
                             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                                 <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -617,13 +617,10 @@ export default function TalkQuestionnaire({
                                 <span className="text-red-500 ml-1">*</span>
                             </h2>
 
-                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                            <div className="bg-amber-50 rounded-lg p-2 mb-4">
                                 <div className="flex">
-                                    <svg className="w-5 h-5 text-amber-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                                    </svg>
                                     <div className="text-sm text-amber-800">
-                                        <p className="font-medium mb-1">STRICT REQUIREMENT:</p>
+                                        <p className="font-bold mb-1">STRICT REQUIREMENT:</p>
                                         <p>You must provide at least one official Church source (Gospel Library link OR scripture reference). Only links from <strong>https://www.churchofjesuschrist.org/</strong> are accepted. This ensures doctrinal accuracy and shows your preparation.</p>
                                     </div>
                                 </div>
@@ -689,7 +686,7 @@ export default function TalkQuestionnaire({
                         </div>
 
                         {/* Custom Theme System */}
-                        <div className="bg-blue-50 rounded-xl p-6">
+                        <div className="bg-blue-50 p-6">
                             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                                 <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -733,7 +730,7 @@ export default function TalkQuestionnaire({
                         </div>
 
                         {/* Audience Context */}
-                        <div className="bg-green-50 rounded-xl p-6">
+                        <div className="bg-green-50 p-6">
                             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                                 <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -755,7 +752,7 @@ export default function TalkQuestionnaire({
                         </div>
 
                         {/* Specific Scriptures - Now Required */}
-                        <div className="bg-yellow-50 rounded-xl p-6 border-2 border-yellow-200">
+                        <div className="bg-yellow-50 p-6">
                             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                                 <svg className="w-5 h-5 mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -764,7 +761,7 @@ export default function TalkQuestionnaire({
                                 <span className="text-red-500 ml-1">*</span>
                             </h2>
 
-                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                            <div className="bg-amber-50 rounded-xl border border-amber-200 rounded-lg p-4 mb-4">
                                 <div className="flex">
                                     <svg className="w-5 h-5 text-amber-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -836,64 +833,41 @@ export default function TalkQuestionnaire({
                         <div className="flex justify-center pt-6">
                             <div className="w-full sm:w-auto">
                                 {!isFormComplete() && (
-                                    <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                                    <div className="mb-4 p-4">
                                         <div className="flex items-start">
                                             <svg className="w-5 h-5 text-amber-600 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                                             </svg>
-                                            <div className="text-sm text-amber-800">
+                                            <div className="text-sm text-amber-600">
                                                 <p className="font-medium mb-1">Complete All Required Fields</p>
                                                 <p>Please fill in all required fields (marked with *) before generating your talk. This ensures we have everything needed to create a meaningful, personalized talk for you.</p>
-                                                {/* Debug info - remove in production */}
-                                                <details className="mt-2">
-                                                    <summary className="cursor-pointer text-xs">Debug Info</summary>
-                                                    <div className="mt-1 text-xs space-y-1">
-                                                        <div>Topic: {formData.topic ? '✓' : '✗'}</div>
-                                                        <div>Duration: {formData.duration >= 5 && formData.duration <= 60 ? '✓' : '✗'}</div>
-                                                        <div>Meeting Type: {formData.meetingType ? '✓' : '✗'}</div>
-                                                        <div>Audience Type: {getAutoSelectedAudience(formData.meetingType) || formData.audienceType ? '✓' : '✗'}</div>
-                                                        <div>Speaker Age: {formData.speakerAge ? '✓' : '✗'}</div>
-                                                        <div>Personal Story: {formData.personalStory ? '✓' : '✗'}</div>
-                                                        <div>Gospel Links: {(formData.gospelLibraryLinks || []).filter(l => l?.trim()).length > 0 ? '✓' : '✗'}</div>
-                                                        <div>Scriptures: {(formData.specificScriptures || []).filter(s => s?.trim()).length > 0 ? '✓' : '✗'}</div>
-                                                        <div>Themes: {((formData.preferredThemes?.length || 0) + (formData.customThemes?.length || 0)) > 0 ? '✓' : '✗'}</div>
-                                                        <div>Audience Context: {formData.audienceContext ? '✓' : '✗'}</div>
-                                                    </div>
-                                                </details>
                                             </div>
                                         </div>
                                     </div>
                                 )}
+                                {isFormComplete() && (
+                                    <div className="flex justify-center">
+                                        <EnhancedButton
+                                            type="submit"
+                                            loading={isLoading}
+                                            loadingText={getLoadingText()}
+                                            progress={progress}
+                                            showProgress={isLoading && progress > 0}
+                                            size="lg"
+                                            disabled={!isFormComplete() || isLoading}
+                                            className={`px-8 py-4 font-semibold rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg min-h-[48px] transition-all duration-200 ${isFormComplete() && !isLoading
+                                                ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-xl cursor-pointer'
+                                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                }`}
+                                        >
 
-                                <EnhancedButton
-                                    type="submit"
-                                    loading={isLoading}
-                                    loadingText={getLoadingText()}
-                                    progress={progress}
-                                    showProgress={isLoading && progress > 0}
-                                    size="lg"
-                                    disabled={!isFormComplete() || isLoading}
-                                    className={`w-full sm:w-auto px-8 py-4 font-semibold rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg min-h-[48px] transition-all duration-200 ${isFormComplete() && !isLoading
-                                        ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-xl cursor-pointer'
-                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        }`}
-                                >
-                                    {isFormComplete() ? (
-                                        <>
                                             Generate My Talk
                                             <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                                             </svg>
-                                        </>
-                                    ) : (
-                                        <>
-                                            Complete Required Fields
-                                            <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                                            </svg>
-                                        </>
-                                    )}
-                                </EnhancedButton>
+                                        </EnhancedButton>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </form>

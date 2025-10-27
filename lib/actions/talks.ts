@@ -726,7 +726,7 @@ You are speaking to a diverse, worldwide audience with varied cultural backgroun
         promptSections.push(`TALK STRUCTURE REQUIREMENTS:
 
 1. OPENING (1-2 minutes):
- - Dynamic greeting appropriate for time of day and setting (avoid fixed "Good morning" - use "Good afternoon," "Good evening," or "Brothers and sisters" as appropriate)
+ - No need to greet
  - Warm connection with audience
  - Clear introduction of the topic
  - Brief preview of what will be shared
@@ -873,7 +873,7 @@ CRITICAL REQUIREMENTS:
 7. Include specific scripture references and quotes from Church leaders
 8. Ensure the talk flows naturally when spoken aloud
 9. Generate content appropriate for the FULL duration specified - NO artificial word limits
-10. Use dynamic greetings appropriate for time/setting (not always "Good morning")
+10. DO NOT add greeting to the talk. e.g "Good evening". No need to add this. No need to add any form of greeting. 
 11. MUST include ALL user-provided Gospel Library links in the sources section
 12. Use plain text formatting only - NO markdown bold (**text**) or other markdown
 
@@ -898,11 +898,13 @@ Format as a simple bulleted list with full URLs
 
 STRICT CONTENT RESTRICTIONS:
 - ONLY reference content from https://www.churchofjesuschrist.org/
-- If you cannot verify a source is from churchofjesuschrist.org, DO NOT include it
+- If you cannot verify a source is from churchofjesuschrist.org, DO NOT include it. Infact do not generate that talk.
 - No external sources, books, or non-Church materials whatsoever
 - If asked to reference non-Church content, refuse and explain the restriction
 - Focus on doctrine, principles, and spiritual application
 - Keep content appropriate for all ages in a Church setting
+- Watch out for controversial topics or personal opinions on Church policies
+- VALIDATION: All references must be verifiable on churchofjesuschrist.org
 
 PURPOSE & PHILOSOPHY:
 This tool helps members who have already done their spiritual preparation and study. The AI enhances their prepared thoughts and testimony - it does not replace personal spiritual preparation. The user has provided their own research, personal story, and Church sources, showing they have built their own testimony first.
