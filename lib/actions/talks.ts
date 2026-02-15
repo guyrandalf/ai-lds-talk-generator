@@ -398,7 +398,7 @@ async function callXaiAPI(messages: XAIMessage[], options: {
             },
             body: JSON.stringify({
                 messages,
-                model: 'grok-2-1212',
+                model: 'grok-4-fast-reasoning',
                 stream: false,
                 temperature,
                 max_tokens: maxTokens,
