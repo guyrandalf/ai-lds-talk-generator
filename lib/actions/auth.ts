@@ -4,13 +4,10 @@ import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '../db'
 import { sanitizeInput } from '../security/inputSanitization'
 import { ApiResponse } from '../types/api/responses'
 import { BaseUser } from '../types/auth/user'
-
-
-const prisma = new PrismaClient()
 
 // Validation schemas
 const registerSchema = z.object({

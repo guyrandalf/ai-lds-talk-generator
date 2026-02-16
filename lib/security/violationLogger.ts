@@ -1,10 +1,8 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
 import { headers } from 'next/headers'
+import { prisma } from '../db'
 import type { SecurityViolation } from './aiContentFilter'
-
-const prisma = new PrismaClient()
 
 export interface SecurityViolationLog {
     id: string

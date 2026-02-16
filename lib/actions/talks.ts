@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import { validateTalkContent } from './validation'
 import { getSession } from './auth'
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, UnderlineType } from 'docx'
+import { prisma } from '../db'
 import { sanitizeFormData } from '../security/inputSanitization'
 import { ApiResponse, ValidationResponse } from '../types/api/responses'
 import { ProcessedQuestionnaireResult, TalkQuestionnaire, GeneratedTalk, ChurchSource, MeetingType, TalkPreferences, DatabaseTalk } from '../types/talks/generation'
@@ -1507,8 +1507,11 @@ export async function exportTalkToWord(talk: GeneratedTalk): Promise<{
     try {
         console.log('Exporting talk to Word:', talk.title)
 
+        // Lazy-load docx only when needed
+        const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, UnderlineType } = await import('docx')
+
         // Create document sections
-        const children: Paragraph[] = []
+        const children: InstanceType<typeof Paragraph>[] = []
 
         // Title
         children.push(
@@ -1741,10 +1744,6 @@ export async function saveTalkToDatabase(talk: GeneratedTalk): Promise<ApiRespon
             }
         }
 
-        // Import Prisma client
-        const { PrismaClient } = await import('@prisma/client')
-        const prisma = new PrismaClient()
-
         try {
             // Calculate word count for cumulative stats
             const wordCount = talk.content.split(/\s+/).length
@@ -1796,11 +1795,15 @@ export async function saveTalkToDatabase(talk: GeneratedTalk): Promise<ApiRespon
                 success: true,
                 data: { talkId: savedTalk.id }
             }
-        } finally {
-            await prisma.$disconnect()
+        } catch (error) {
+            console.error('Save talk error:', error)
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to save talk'
+            }
         }
     } catch (error) {
-        console.error('Save talk error:', error)
+        console.error('Save talk outer error:', error)
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to save talk'
@@ -1826,32 +1829,25 @@ export async function getUserCumulativeStats(): Promise<ApiResponse<{
             }
         }
 
-        const { PrismaClient } = await import('@prisma/client')
-        const prisma = new PrismaClient()
-
-        try {
-            const user = await prisma.user.findUnique({
-                where: { id: session.userId },
-                select: {
-                    totalTalksGenerated: true,
-                    totalWordsWritten: true,
-                    longestStreak: true
-                }
-            })
-
-            if (!user) {
-                return {
-                    success: false,
-                    error: 'User not found'
-                }
+        const user = await prisma.user.findUnique({
+            where: { id: session.userId },
+            select: {
+                totalTalksGenerated: true,
+                totalWordsWritten: true,
+                longestStreak: true
             }
+        })
 
+        if (!user) {
             return {
-                success: true,
-                data: user
+                success: false,
+                error: 'User not found'
             }
-        } finally {
-            await prisma.$disconnect()
+        }
+
+        return {
+            success: true,
+            data: user
         }
     } catch (error) {
         console.error('Get user stats error:', error)
@@ -1875,9 +1871,6 @@ export async function getUserRecentTalks(limit: number = 3): Promise<ApiResponse
                 error: 'User must be authenticated to view saved talks'
             }
         }
-
-        const { PrismaClient } = await import('@prisma/client')
-        const prisma = new PrismaClient()
 
         try {
             // Fetch user's recent talks with limit
@@ -1921,11 +1914,15 @@ export async function getUserRecentTalks(limit: number = 3): Promise<ApiResponse
                 success: true,
                 data: talks
             }
-        } finally {
-            await prisma.$disconnect()
+        } catch (error) {
+            console.error('Get recent talks error:', error)
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to get recent talks'
+            }
         }
     } catch (error) {
-        console.error('Get recent talks error:', error)
+        console.error('Get recent talks outer error:', error)
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to get recent talks'
@@ -1955,78 +1952,71 @@ export async function getUserTalksPaginated(
             }
         }
 
-        const { PrismaClient } = await import('@prisma/client')
-        const prisma = new PrismaClient()
+        const skip = (page - 1) * limit
 
-        try {
-            const skip = (page - 1) * limit
+        // Build search conditions
+        const searchConditions = search ? {
+            OR: [
+                { title: { contains: search, mode: 'insensitive' as const } },
+                { content: { contains: search, mode: 'insensitive' as const } },
+                { topic: { contains: search, mode: 'insensitive' as const } }
+            ]
+        } : {}
 
-            // Build search conditions
-            const searchConditions = search ? {
-                OR: [
-                    { title: { contains: search, mode: 'insensitive' as const } },
-                    { content: { contains: search, mode: 'insensitive' as const } },
-                    { topic: { contains: search, mode: 'insensitive' as const } }
-                ]
-            } : {}
+        const whereClause = {
+            userId: session.userId,
+            ...searchConditions
+        }
 
-            const whereClause = {
-                userId: session.userId,
-                ...searchConditions
-            }
+        // Get total count for pagination
+        const totalCount = await prisma.talk.count({
+            where: whereClause
+        })
 
-            // Get total count for pagination
-            const totalCount = await prisma.talk.count({
-                where: whereClause
-            })
+        // Fetch paginated talks
+        const savedTalks = await prisma.talk.findMany({
+            where: whereClause,
+            orderBy: {
+                createdAt: 'desc'
+            },
+            skip,
+            take: limit
+        })
 
-            // Fetch paginated talks
-            const savedTalks = await prisma.talk.findMany({
-                where: whereClause,
-                orderBy: {
-                    createdAt: 'desc'
-                },
-                skip,
-                take: limit
-            })
+        console.log(`getUserTalksPaginated: Found ${savedTalks.length} talks (page ${page}, limit ${limit}) for user ${session.userId}`)
 
-            console.log(`getUserTalksPaginated: Found ${savedTalks.length} talks (page ${page}, limit ${limit}) for user ${session.userId}`)
-
-            // Convert database records to GeneratedTalk format
-            const talks: GeneratedTalk[] = savedTalks.map((talk) => ({
-                id: talk.id,
-                title: talk.title,
-                content: talk.content,
+        // Convert database records to GeneratedTalk format
+        const talks: GeneratedTalk[] = savedTalks.map((talk) => ({
+            id: talk.id,
+            title: talk.title,
+            content: talk.content,
+            duration: talk.duration,
+            meetingType: talk.meetingType as MeetingType,
+            sources: [],
+            questionnaire: {
+                topic: talk.topic || '',
                 duration: talk.duration,
                 meetingType: talk.meetingType as MeetingType,
-                sources: [],
-                questionnaire: {
-                    topic: talk.topic || '',
-                    duration: talk.duration,
-                    meetingType: talk.meetingType as MeetingType,
-                    personalStory: talk.personalStory || '',
-                    gospelLibraryLinks: talk.gospelLibraryLinks,
-                    audienceType: (talk.preferences as TalkPreferences)?.audienceType,
-                    preferredThemes: (talk.preferences as TalkPreferences)?.preferredThemes || [],
-                    customThemes: talk.customThemes,
-                    audienceContext: talk.audienceContext || '',
-                    specificScriptures: (talk.preferences as TalkPreferences)?.specificScriptures || []
-                },
-                createdAt: talk.createdAt
-            }))
+                personalStory: talk.personalStory || '',
+                gospelLibraryLinks: talk.gospelLibraryLinks,
+                audienceType: (talk.preferences as TalkPreferences)?.audienceType,
+                preferredThemes: (talk.preferences as TalkPreferences)?.preferredThemes || [],
+                customThemes: talk.customThemes,
+                audienceContext: talk.audienceContext || '',
+                specificScriptures: (talk.preferences as TalkPreferences)?.specificScriptures || []
+            },
+            createdAt: talk.createdAt
+        }))
 
-            const hasMore = skip + savedTalks.length < totalCount
+        const hasMore = skip + savedTalks.length < totalCount
 
-            return {
-                success: true,
-                data: {
-                    talks,
-                    totalCount,
-                    hasMore
-                }
+        return {
+            success: true,
+            data: {
+                talks,
+                totalCount,
+                hasMore
             }
-        } finally {
-            await prisma.$disconnect()
         }
     } catch (error) {
         console.error('Get paginated talks error:', error)
@@ -2052,20 +2042,17 @@ export async function getUserSavedTalks(): Promise<ApiResponse<GeneratedTalk[]>>
             }
         }
 
-        // Skip cache for now to ensure fresh data
-        // const { getCachedUserTalks, setCachedUserTalks } = await import('../cache/queryCache')
-        // const cachedTalks = await getCachedUserTalks(session.userId)
+        // Check cache first
+        const { getCachedUserTalks, setCachedUserTalks, invalidateTalkCache } = await import('../cache/queryCache')
+        const cachedTalks = await getCachedUserTalks(session.userId)
 
-        // if (cachedTalks) {
-        //     return {
-        //         success: true,
-        //         data: cachedTalks as GeneratedTalk[]
-        //     }
-        // }
-
-        // Import Prisma client
-        const { PrismaClient } = await import('@prisma/client')
-        const prisma = new PrismaClient()
+        if (cachedTalks) {
+            console.log(`getUserSavedTalks: Returning cached talks for user ${session.userId}`)
+            return {
+                success: true,
+                data: cachedTalks as GeneratedTalk[]
+            }
+        }
 
         try {
             // Fetch user's talks
@@ -2103,15 +2090,19 @@ export async function getUserSavedTalks(): Promise<ApiResponse<GeneratedTalk[]>>
                 createdAt: talk.createdAt
             }))
 
-            // Cache disabled for now to ensure fresh data
-            // await setCachedUserTalks(session.userId, talks, 10 * 60)
+            // Cache for 5 minutes on successful fetch
+            await setCachedUserTalks(session.userId, talks, 5 * 60)
 
             return {
                 success: true,
                 data: talks
             }
-        } finally {
-            await prisma.$disconnect()
+        } catch (error) {
+            console.error('Get saved talks error:', error)
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to retrieve saved talks'
+            }
         }
     } catch (error) {
         console.error('Get saved talks error:', error)
@@ -2145,10 +2136,6 @@ export async function deleteSavedTalk(talkId: string): Promise<ApiResponse<void>
             }
         }
 
-        // Import Prisma client
-        const { PrismaClient } = await import('@prisma/client')
-        const prisma = new PrismaClient()
-
         try {
             // Verify talk belongs to user and delete
             const deletedTalk = await prisma.talk.deleteMany({
@@ -2165,6 +2152,10 @@ export async function deleteSavedTalk(talkId: string): Promise<ApiResponse<void>
                 }
             }
 
+            // Invalidate user's talk cache after deletion
+            const { invalidateTalkCache } = await import('../cache/queryCache')
+            await invalidateTalkCache(talkId, session.userId)
+
             console.log('Talk deleted successfully', {
                 talkId,
                 userId: session.userId
@@ -2173,8 +2164,12 @@ export async function deleteSavedTalk(talkId: string): Promise<ApiResponse<void>
             return {
                 success: true
             }
-        } finally {
-            await prisma.$disconnect()
+        } catch (error) {
+            console.error('Delete talk error:', error)
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to delete talk'
+            }
         }
     } catch (error) {
         console.error('Delete talk error:', error)
@@ -2207,10 +2202,6 @@ export async function updateSavedTalk(talkId: string, updates: Partial<Generated
                 error: 'Talk ID is required'
             }
         }
-
-        // Import Prisma client
-        const { PrismaClient } = await import('@prisma/client')
-        const prisma = new PrismaClient()
 
         try {
             // Prepare update data
@@ -2257,6 +2248,10 @@ export async function updateSavedTalk(talkId: string, updates: Partial<Generated
                 }
             }
 
+            // Invalidate cache after update
+            const { invalidateTalkCache } = await import('../cache/queryCache')
+            await invalidateTalkCache(talkId, session.userId)
+
             console.log('Talk updated successfully', {
                 talkId,
                 userId: session.userId
@@ -2265,8 +2260,12 @@ export async function updateSavedTalk(talkId: string, updates: Partial<Generated
             return {
                 success: true
             }
-        } finally {
-            await prisma.$disconnect()
+        } catch (error) {
+            console.error('Update talk error:', error)
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to update talk'
+            }
         }
     } catch (error) {
         console.error('Update talk error:', error)
@@ -2299,10 +2298,6 @@ export async function getSavedTalkById(talkId: string): Promise<ApiResponse<Gene
                 error: 'Talk ID is required'
             }
         }
-
-        // Import Prisma client
-        const { PrismaClient } = await import('@prisma/client')
-        const prisma = new PrismaClient()
 
         try {
             // Fetch specific talk
@@ -2347,8 +2342,12 @@ export async function getSavedTalkById(talkId: string): Promise<ApiResponse<Gene
                 success: true,
                 data: talk
             }
-        } finally {
-            await prisma.$disconnect()
+        } catch (error) {
+            console.error('Get saved talk error:', error)
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to retrieve saved talk'
+            }
         }
     } catch (error) {
         console.error('Get saved talk error:', error)
@@ -2388,10 +2387,6 @@ export async function shareTalk(
                 error: 'Talk ID and recipient IDs are required'
             }
         }
-
-        // Import Prisma client
-        const { PrismaClient } = await import('@prisma/client')
-        const prisma = new PrismaClient()
 
         try {
             // Verify the talk exists and belongs to the current user
@@ -2468,8 +2463,12 @@ export async function shareTalk(
                 success: true,
                 sharesCreated: shares.length
             }
-        } finally {
-            await prisma.$disconnect()
+        } catch (error) {
+            console.error('Share talk error:', error)
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to share talk'
+            }
         }
     } catch (error) {
         console.error('Share talk error:', error)
@@ -2498,10 +2497,6 @@ export async function getReceivedSharedTalks(): Promise<{
                 error: 'User must be authenticated to view shared talks'
             }
         }
-
-        // Import Prisma client
-        const { PrismaClient } = await import('@prisma/client')
-        const prisma = new PrismaClient()
 
         try {
             // Fetch received shares
@@ -2559,8 +2554,12 @@ export async function getReceivedSharedTalks(): Promise<{
                 success: true,
                 shares
             }
-        } finally {
-            await prisma.$disconnect()
+        } catch (error) {
+            console.error('Get received shared talks error:', error)
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to retrieve shared talks'
+            }
         }
     } catch (error) {
         console.error('Get received shared talks error:', error)
@@ -2589,10 +2588,6 @@ export async function getSharedTalksByUser(): Promise<{
                 error: 'User must be authenticated to view shared talks'
             }
         }
-
-        // Import Prisma client
-        const { PrismaClient } = await import('@prisma/client')
-        const prisma = new PrismaClient()
 
         try {
             // Fetch shares created by current user
@@ -2651,8 +2646,12 @@ export async function getSharedTalksByUser(): Promise<{
                 success: true,
                 shares
             }
-        } finally {
-            await prisma.$disconnect()
+        } catch (error) {
+            console.error('Get user shared talks error:', error)
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to retrieve shared talks'
+            }
         }
     } catch (error) {
         console.error('Get user shared talks error:', error)
@@ -2691,10 +2690,6 @@ export async function respondToSharedTalk(
                 error: 'Valid share ID and response are required'
             }
         }
-
-        // Import Prisma client
-        const { PrismaClient } = await import('@prisma/client')
-        const prisma = new PrismaClient()
 
         try {
             // Update the share status
@@ -2754,8 +2749,12 @@ export async function respondToSharedTalk(
             return {
                 success: true
             }
-        } finally {
-            await prisma.$disconnect()
+        } catch (error) {
+            console.error('Respond to shared talk error:', error)
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to respond to shared talk'
+            }
         }
     } catch (error) {
         console.error('Respond to shared talk error:', error)
@@ -2805,10 +2804,6 @@ export async function searchUsers(
 
         // Clean and normalize the query
         const cleanQuery = query.trim().toLowerCase()
-
-        // Import Prisma client
-        const { PrismaClient } = await import('@prisma/client')
-        const prisma = new PrismaClient()
 
         try {
             // Enhanced search for users by email or name, excluding the current user
@@ -2941,8 +2936,12 @@ export async function searchUsers(
                 success: true,
                 users: sortedUsers
             }
-        } finally {
-            await prisma.$disconnect()
+        } catch (error) {
+            console.error('Search users error:', error)
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to search users'
+            }
         }
     } catch (error) {
         console.error('Search users error:', error)
