@@ -1,10 +1,13 @@
 'use server'
 
 import { z } from 'zod'
-import { validateTalkContent } from './validation'
+import { validateTalkContent, validateCompleteGeneratedTalk, validateContentUrls, applySafetyFilter } from './validation'
 import { getSession } from './auth'
 import { prisma } from '../db'
 import { sanitizeFormData } from '../security/inputSanitization'
+import { validateQuestionnaireInput, validateAIResponse } from '../security/aiContentFilter'
+import { convertViolationsToFeedback } from '../utils/contentFeedback'
+import { getCachedUserTalks, setCachedUserTalks, invalidateTalkCache } from '../cache/queryCache'
 import { ApiResponse, ValidationResponse } from '../types/api/responses'
 import { ProcessedQuestionnaireResult, TalkQuestionnaire, GeneratedTalk, ChurchSource, MeetingType, TalkPreferences, DatabaseTalk } from '../types/talks/generation'
 import { getMeetingTypeLabel } from '../utils/meetingTypes'
@@ -850,8 +853,6 @@ export async function generateTalk(questionnaire: TalkQuestionnaire): Promise<Ap
         }
 
         // Validate questionnaire input with AI content filter
-        const { validateQuestionnaireInput } = await import('../security/aiContentFilter')
-        const { convertViolationsToFeedback } = await import('../utils/contentFeedback')
 
         const filterResult = await validateQuestionnaireInput(questionnaire, {
             userId: session?.userId,
@@ -964,7 +965,6 @@ Provide the talk content in a clear, readable format with proper paragraphs and 
         const extractedSources = extractChurchSources(processedContent.content)
 
         // Validate AI response with security filter
-        const { validateAIResponse } = await import('../security/aiContentFilter')
         const aiValidation = await validateAIResponse(generatedContent, {
             userId: session?.userId,
             sessionId: sessionId
@@ -982,7 +982,6 @@ Provide the talk content in a clear, readable format with proper paragraphs and 
         }
 
         // Validate generated content with comprehensive safety checks
-        const { validateCompleteGeneratedTalk } = await import('./validation')
         const contentValidation = await validateCompleteGeneratedTalk({
             title: processedContent.title,
             content: processedContent.content,
@@ -1281,8 +1280,6 @@ export async function validateAndSanitizeGeneratedTalk(
     try {
         console.log('Validating generated talk:', talk.title)
 
-        // Import validation functions
-        const { validateCompleteGeneratedTalk, validateContentUrls, applySafetyFilter } = await import('./validation')
 
         // Perform comprehensive validation
         const validation = await validateCompleteGeneratedTalk({
@@ -2043,7 +2040,6 @@ export async function getUserSavedTalks(): Promise<ApiResponse<GeneratedTalk[]>>
         }
 
         // Check cache first
-        const { getCachedUserTalks, setCachedUserTalks, invalidateTalkCache } = await import('../cache/queryCache')
         const cachedTalks = await getCachedUserTalks(session.userId)
 
         if (cachedTalks) {
@@ -2153,7 +2149,6 @@ export async function deleteSavedTalk(talkId: string): Promise<ApiResponse<void>
             }
 
             // Invalidate user's talk cache after deletion
-            const { invalidateTalkCache } = await import('../cache/queryCache')
             await invalidateTalkCache(talkId, session.userId)
 
             console.log('Talk deleted successfully', {
@@ -2249,7 +2244,6 @@ export async function updateSavedTalk(talkId: string, updates: Partial<Generated
             }
 
             // Invalidate cache after update
-            const { invalidateTalkCache } = await import('../cache/queryCache')
             await invalidateTalkCache(talkId, session.userId)
 
             console.log('Talk updated successfully', {
