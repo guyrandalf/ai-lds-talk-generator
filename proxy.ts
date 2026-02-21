@@ -53,7 +53,7 @@ async function handleAuthentication(request: NextRequest, pathname: string) {
     const sessionCookie = request.cookies.get('session')
 
     // Protected routes that require authentication
-    const protectedRoutes = ['/dashboard', '/settings', '/generate', '/questionnaire']
+    const protectedRoutes = ['/dashboard', '/settings', '/generate', '/questionnaire', '/talks', '/talk', '/shared-talks']
 
     // Auth routes that should redirect if already logged in
     const authRoutes = ['/auth/login', '/auth/register']

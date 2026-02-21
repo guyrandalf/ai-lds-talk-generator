@@ -22,56 +22,27 @@ export default function TalkDisplay({
 }: TalkDisplayProps) {
     const [showSources, setShowSources] = useState(false)
 
-    // Format talk content with proper paragraph breaks and smooth transitions
+    // Format talk content as plain readable paragraphs
     const formatTalkContent = (content: string) => {
-        // Split content into paragraphs and clean up
         const paragraphs = content
             .split('\n')
             .map(p => p.trim())
             .filter(p => p.length > 0)
 
-        return paragraphs.map((paragraph, index) => {
-            // Check if this is a transition phrase or connector
-            const isTransition = /^(Now,|As I|Let me|I would like to|In conclusion|Finally,|Brothers and sisters,)/i.test(paragraph)
-
-            // Check if this paragraph contains sources/references
-            const isSource = /^(Source:|References?:|See also:|From:|Available at:)/i.test(paragraph) ||
-                paragraph.includes('churchofjesuschrist.org') ||
-                paragraph.includes('lds.org') ||
-                /^\[.*\]$/.test(paragraph)
-
-            // Format URLs to be more responsive
-            const formatUrls = (text: string) => {
-                // Replace long URLs with clickable, wrapped links
-                return text.replace(
-                    /(https?:\/\/[^\s]+)/g,
-                    '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline break-all">$1</a>'
-                )
-            }
-
-            if (isSource) {
-                return (
-                    <div
-                        key={index}
-                        className="mb-4 p-3 bg-gray-50 rounded-lg border-l-4 border-blue-200"
-                    >
-                        <p
-                            className="text-sm text-gray-600 leading-relaxed break-words"
-                            dangerouslySetInnerHTML={{ __html: formatUrls(paragraph) }}
-                        />
-                    </div>
-                )
-            }
-
-            return (
-                <p
-                    key={index}
-                    className={`mb-4 leading-relaxed break-words ${isTransition ? 'font-medium text-gray-800' : 'text-gray-700'
-                        }`}
-                    dangerouslySetInnerHTML={{ __html: formatUrls(paragraph) }}
-                />
+        // Make URLs clickable
+        const formatUrls = (text: string) =>
+            text.replace(
+                /(https?:\/\/[^\s]+)/g,
+                '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline break-all">$1</a>'
             )
-        })
+
+        return paragraphs.map((paragraph, index) => (
+            <p
+                key={index}
+                className="mb-4 text-gray-800 leading-relaxed break-words"
+                dangerouslySetInnerHTML={{ __html: formatUrls(paragraph) }}
+            />
+        ))
     }
 
     // Calculate estimated reading time
@@ -182,8 +153,8 @@ export default function TalkDisplay({
                 {/* Talk Content */}
                 <div className="px-8 py-8">
                     {/* Content Display */}
-                    <div className="prose prose-lg max-w-none overflow-hidden">
-                        <div className="text-gray-900 font-serif leading-relaxed text-lg break-words">
+                    <div className="max-w-none overflow-hidden">
+                        <div className="break-words">
                             {formatTalkContent(talk.content)}
                         </div>
                     </div>

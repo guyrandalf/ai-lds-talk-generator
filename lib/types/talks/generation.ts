@@ -21,13 +21,15 @@ export interface TalkQuestionnaire {
     duration: number;
     meetingType: MeetingType;
     personalStory?: string;
+    testimony?: string;
     gospelLibraryLinks: string[];
     audienceType?: string;
     speakerAge?: string;
     preferredThemes: string[];
     customThemes: string[];
     audienceContext?: string;
-    specificScriptures: string[];
+    specificScriptures?: string[];
+    country?: string;
 }
 
 export interface ChurchSource {

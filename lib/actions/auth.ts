@@ -87,7 +87,7 @@ export async function registerUser(formData: FormData): Promise<ApiResponse<Base
 
         // Hash password
         console.log('Hashing password...')
-        const hashedPassword = await bcrypt.hash(validatedData.password, 12)
+        const hashedPassword = await bcrypt.hash(validatedData.password, 10)
 
         // Create user
         console.log('Creating user...')

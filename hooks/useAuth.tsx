@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, ReactNode } from "react"
+import { createContext, useContext, useState, ReactNode } from "react"
 import { BaseUser } from "@/lib/types/auth/user"
 
 interface AuthContextType {
@@ -19,19 +19,21 @@ export function AuthProvider({
   children: ReactNode
   initialUser: BaseUser | null
 }) {
+  const [user, setUser] = useState<BaseUser | null>(initialUser)
+
   const refreshUser = async () => {
     const { getCurrentUser } = await import("@/lib/actions/auth")
     const updatedUser = await getCurrentUser()
-    // Note: This doesn't update state directly — implement useReducer if refresh needed
+    setUser(updatedUser)
   }
 
   return (
     <AuthContext.Provider
       value={{
-        user: initialUser,
+        user,
         loading: false,
         refreshUser,
-        setUser: () => {},
+        setUser,
       }}
     >
       {children}

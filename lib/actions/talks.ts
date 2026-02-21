@@ -41,6 +41,7 @@ const questionnaireSchema = z.object({
         message: 'Please select a valid meeting type'
     }),
     personalStory: z.string().min(1, 'Personal story is required to show your preparation and build testimony').max(5000, 'Personal story is too long'),
+    testimony: z.string().min(10, 'Please write at least a brief personal testimony').max(2000, 'Testimony is too long'),
     gospelLibraryLinks: z.array(z.string()).min(1, 'At least one Gospel Library link is required').refine(
         (links) => links.every(link => !link.trim() || link.startsWith('https://www.churchofjesuschrist.org/')),
         { message: 'All Gospel Library links must be from https://www.churchofjesuschrist.org/' }
@@ -50,18 +51,15 @@ const questionnaireSchema = z.object({
     preferredThemes: z.array(z.string()).min(1, 'At least one theme is required'),
     customThemes: z.array(z.string()).default([]),
     audienceContext: z.string().min(1, 'Audience context is required'),
-    specificScriptures: z.array(z.string()).min(1, 'At least one scripture reference is required').refine(
-        (scriptures) => scriptures.every(scripture => scripture.trim().length > 0),
-        { message: 'All scripture references must be filled in' }
-    )
+    specificScriptures: z.array(z.string()).default([]),
+    country: z.string().max(100).optional(),
 }).refine(
     (data) => {
         const validLinks = data.gospelLibraryLinks.filter(link => link.trim())
-        const validScriptures = data.specificScriptures.filter(scripture => scripture.trim())
-        return validLinks.length > 0 && validScriptures.length > 0
+        return validLinks.length > 0
     },
     {
-        message: 'Both Gospel Library links and scripture references are required',
+        message: 'At least one Gospel Library link is required',
         path: ['gospelLibraryLinks']
     }
 )
@@ -618,9 +616,22 @@ This is for a ${getMeetingTypeLabel(questionnaire.meetingType)}. Focus on:
 - Inspiring and uplifting message`)
         }
 
-        // Audience specification
+        // Audience specification — map codes to full human-readable labels with clarifications
         if (questionnaire.audienceType) {
-            promptSections.push(`AUDIENCE: ${questionnaire.audienceType}`)
+            const audienceLabels: Record<string, string> = {
+                general: 'General Congregation (all ages, all backgrounds)',
+                primary: 'Primary children (ages 3-11)',
+                youth: 'Youth (ages 12-18) — teenagers, NOT young adults',
+                ysa: 'Young Single Adults (YSA, ages 18-35) — single adults between 18 and 35. In the LDS Church the YSA program specifically serves single adults in this age range. IMPORTANT: YSA members are NOT youth/teenagers (12-18). Do NOT write for teenagers. Write for independent adults navigating college, careers, missions, and relationships.',
+                single_adults: 'Single Adults (ages 36+)',
+                married_adults: 'Married Adults',
+                senior_adults: 'Senior Adults (ages 65+)',
+                missionaries: 'Full-time missionaries',
+                new_members: 'New members of the Church',
+                less_active: 'Less-active members being fellowshipped',
+            }
+            const audienceLabel = audienceLabels[questionnaire.audienceType] || questionnaire.audienceType
+            promptSections.push(`AUDIENCE: ${audienceLabel}`)
         }
 
         // Speaker age-specific guidance
@@ -648,11 +659,12 @@ The speaker is a youth (12-18 years old). Please:
 - Avoid overly mature language or experiences that don't fit their age`
             } else if (questionnaire.speakerAge.includes('Young Adult')) {
                 ageGuidance = `SPEAKER AGE GUIDANCE:
-The speaker is a young adult (18-35 years old). Please:
-- Use contemporary but reverent language
-- Include examples relevant to young adult experiences (college, career, dating, marriage, early parenthood)
-- Focus on gospel principles for life transitions and building testimonies
-- If no personal story is provided, reference experiences like mission service, institute, young adult activities, or early adult challenges`
+The speaker is a Young Single Adult (YSA, 18-35 years old) — a single adult, NOT a teenager or youth. Please:
+- Use contemporary but reverent language appropriate for an adult
+- Include examples relevant to young adult life: college, university, career, job searching, mission service, institute, dating, marriage preparation, living independently, navigating faith as an adult
+- Focus on gospel principles for life transitions: building testimonies independently, preparing for eternal marriage, developing spiritual maturity
+- NEVER reference high school, seminary class schedules, youth activities, or teenage experiences — this speaker is an adult
+- If no personal story is provided, reference young adult experiences like serving a mission, attending institute, navigating early adulthood with faith, or preparing for temple covenants`
             } else {
                 ageGuidance = `SPEAKER AGE GUIDANCE:
 The speaker is an adult (36+ years old). Please:
@@ -681,18 +693,28 @@ Since no specific personal story was provided, please:
 - Make it feel personal through testimony and application rather than invented stories`)
         }
 
-        // Gospel Library references
+        // Gospel Library references — fetch actual page content so the AI can read the material
         if (questionnaire.gospelLibraryLinks.length > 0) {
-            promptSections.push(`REQUIRED GOSPEL LIBRARY REFERENCES:
-${questionnaire.gospelLibraryLinks.map((link: string) => `- ${link}`).join('\n')}
+            const { fetchMultipleChurchContents } = await import('../utils/churchContentFetcher')
+            const fetchedContent = await fetchMultipleChurchContents(questionnaire.gospelLibraryLinks)
 
-`)
+            if (fetchedContent) {
+                promptSections.push(`GOSPEL LIBRARY CONTENT (the speaker studied these Church sources — read this content and incorporate it into the talk):
+${fetchedContent}
+
+REQUIRED GOSPEL LIBRARY REFERENCES (include ALL of these in your Sources section):
+${questionnaire.gospelLibraryLinks.map((link: string) => `- ${link}`).join('\n')}`)
+            } else {
+                promptSections.push(`REQUIRED GOSPEL LIBRARY REFERENCES (include ALL of these in your Sources section):
+${questionnaire.gospelLibraryLinks.map((link: string) => `- ${link}`).join('\n')}`)
+            }
         }
 
-        // Specific scriptures
-        if (questionnaire.specificScriptures && questionnaire.specificScriptures.length > 0) {
-            promptSections.push(`SCRIPTURES TO REFERENCE:
-${questionnaire.specificScriptures.map((scripture: string) => `- ${scripture}`).join('\n')}
+        // Additional scriptures (now optional — church links already contain scripture content)
+        const validScriptures = (questionnaire.specificScriptures || []).filter((s: string) => s.trim())
+        if (validScriptures.length > 0) {
+            promptSections.push(`ADDITIONAL SCRIPTURES TO REFERENCE (supplement the scriptures already in the Gospel Library content above):
+${validScriptures.map((scripture: string) => `- ${scripture}`).join('\n')}
 
 Include these scriptures with context and application to the topic.`)
         }
@@ -755,6 +777,31 @@ You are speaking to a diverse, worldwide audience with varied cultural backgroun
             }
         }
 
+        // Country/cultural context
+        if (questionnaire.country?.trim()) {
+            promptSections.push(`CULTURAL CONTEXT — IMPORTANT:
+This talk is being given in ${questionnaire.country.trim()}.
+- Use examples, humor, and illustrations that are familiar and relevant to people living in ${questionnaire.country.trim()}
+- Do NOT reference places, brands, entertainment venues, sports teams, or experiences that are unavailable or uncommon in ${questionnaire.country.trim()} (for example, do not mention Disneyland for a speaker in Nigeria, or reference US-specific TV shows for an international audience)
+- Draw from universal human experiences or everyday life experiences common in ${questionnaire.country.trim()}
+- Be sensitive to the local economic, social, and cultural context of ${questionnaire.country.trim()}
+- If the LDS Church has a notable presence in ${questionnaire.country.trim()}, you may reference local Church culture where appropriate`)
+        }
+
+        // Speaker's personal testimony — MUST be used exactly as written (grammar corrected)
+        if (questionnaire.testimony?.trim()) {
+            promptSections.push(`SPEAKER'S PERSONAL TESTIMONY — CRITICAL INSTRUCTION:
+The speaker has written their own personal testimony in their own words. You MUST use this testimony to close the talk.
+Rules:
+- Correct grammar and spelling ONLY
+- Do NOT change the meaning, sentiment, or substance in any way
+- Do NOT add to it, expand it, or replace it with your own words
+- Place this as the final paragraph(s) before "In the name of Jesus Christ, Amen."
+
+Testimony text:
+"${questionnaire.testimony.trim()}"`)
+        }
+
         // Talk structure requirements
         promptSections.push(`TALK STRUCTURE REQUIREMENTS:
 
@@ -774,8 +821,8 @@ You are speaking to a diverse, worldwide audience with varied cultural backgroun
  - Expand content proportionally to fill the full ${questionnaire.duration} minutes
 
 3. TESTIMONY AND CLOSING (1-2 minutes):
- - Strong personal testimony related to the topic
- - Invitation for audience to apply principles
+ - Use ONLY the speaker's personal testimony provided above — grammar/spelling corrected, meaning unchanged
+ - DO NOT write your own testimony
  - Closing in the name of Jesus Christ
 
 WRITING STYLE:
@@ -888,51 +935,66 @@ export async function generateTalk(questionnaire: TalkQuestionnaire): Promise<Ap
         // Create system message for talk generation
         const systemMessage: XAIMessage = {
             role: 'system',
-            content: `You are an expert at writing LDS sacrament meeting, stake conference, and devotional talks. You help members of The Church of Jesus Christ of Latter-day Saints create meaningful, doctrinally sound talks using Pulpit Pal.
+            content: `You are an expert at writing LDS sacrament meeting, stake conference, and devotional talks for members of The Church of Jesus Christ of Latter-day Saints. You write in the authentic voice and style of a sincere Latter-day Saint giving a heartfelt talk.
 
 CRITICAL REQUIREMENTS:
-1. Write in first person as if the speaker is delivering personally
-2. Use ONLY official Church content from https://www.churchofjesuschrist.org/ - NO EXCEPTIONS
-3. Include smooth transitions between sections
-4. Structure: Introduction → Main points → Personal application → Testimony → Sources
-5. End with personal testimony followed by sources section
-6. Make it feel authentic and personal to the speaker
-7. Include specific scripture references and quotes from Church leaders
-8. Ensure the talk flows naturally when spoken aloud
-9. Generate content appropriate for the FULL duration specified - NO artificial word limits
-10. DO NOT add greeting to the talk. e.g "Good evening". No need to add this. No need to add any form of greeting. 
-11. MUST include ALL user-provided Gospel Library links in the sources section
-12. Use plain text formatting only - NO markdown bold (**text**) or other markdown
+1. Write entirely in first person as if the speaker is personally delivering this talk
+2. Use ONLY official Church content from https://www.churchofjesuschrist.org/ — NO EXCEPTIONS
+3. Include smooth, natural spoken transitions between ideas
+4. DO NOT add any greeting (no "Good morning", "Good evening", "Brothers and sisters" opener, etc.)
+5. MUST include ALL user-provided Gospel Library links in the sources section
+6. Generate content appropriate for the FULL duration specified — NO artificial word limits
+
+LDS TALK STRUCTURE (follow this carefully):
+The opening of a proper LDS talk begins by connecting directly with the topic — the speaker acknowledges their topic/theme and begins sharing their perspective and testimony. They do NOT greet the audience or introduce themselves.
+
+1. OPENING: Begin with a meaningful scripture, quote from a Church leader, or a brief personal thought that introduces the topic naturally. Transition immediately into the theme.
+
+2. MAIN CONTENT: Develop the gospel topic with:
+   - Personal stories and experiences woven throughout
+   - Scripture references with their meaning explained
+   - Quotes from general conference talks or Church leaders
+   - Practical application to everyday life
+
+3. TESTIMONY AND CLOSING: The speaker has written their own personal testimony. You MUST use ONLY their exact testimony words (with grammar/spelling corrections only — do NOT change the meaning, sentiment, or substance). Place their testimony as the final paragraph(s) of the talk. The very last line of the talk must always be: "In the name of Jesus Christ, Amen." DO NOT invent or write your own testimony — use only what the speaker provided.
+
+LDS AUDIENCE CLARIFICATION — THIS IS CRITICAL:
+- Youth (12-18): teenagers, in seminary, living at home
+- Young Single Adults / YSA (18-35): ADULTS — in college, working, serving missions, NOT teenagers. Never mix these up.
+- The YSA program in the LDS Church is specifically for SINGLE ADULTS aged 18-35. They are adults navigating college, careers, dating, marriage, and independent faith — not teenagers.
+
+ABSOLUTE FORMATTING RULES — NO EXCEPTIONS:
+- Write as flowing spoken paragraphs ONLY
+- NO section headers whatsoever (no "Introduction:", no "Main Point 1:", no "Conclusion:")
+- NO bullet points or numbered lists in the body of the talk
+- NO bold text (**text**) — plain text only
+- NO italic markdown (*text*) — plain text only
+- NO horizontal rules (---)
+- NO markdown of any kind
+- Emphasis must come through word choice and sentence structure, not formatting
+- The talk should read exactly as it would be spoken — just paragraphs separated by blank lines
 
 DURATION COMPLIANCE:
 - Generate talks that will take the FULL specified duration to deliver
-- For 15+ minute talks, include substantial content with multiple main points
+- For 15+ minute talks, include substantial content with multiple developed points
 - Expand all sections proportionally to fill the time
 - Do not create abbreviated or summary versions
 
-FORMATTING REQUIREMENTS:
-- Use plain text only - no markdown formatting
-- If emphasis is needed, use natural speech patterns or occasional ALL CAPS
-- Never use **bold** or *italic* markdown syntax
-- Keep formatting simple and readable
-
-
-
 STRICT CONTENT RESTRICTIONS:
 - ONLY reference content from https://www.churchofjesuschrist.org/
-- If you cannot verify a source is from churchofjesuschrist.org, DO NOT include it. Infact do not generate that talk.
-- No external sources, books, or non-Church materials whatsoever
-- If asked to reference non-Church content, refuse and explain the restriction
+- No external sources, books, or non-Church materials
 - Focus on doctrine, principles, and spiritual application
-- Keep content appropriate for all ages in a Church setting
-- Watch out for controversial topics or personal opinions on Church policies
-- VALIDATION: All references must be verifiable on churchofjesuschrist.org
+- Keep content appropriate for a Church setting
+- Avoid controversial topics or personal opinions on Church policies
+- All references must be verifiable on churchofjesuschrist.org
 
-PURPOSE & PHILOSOPHY:
-This tool helps members who have already done their spiritual preparation and study. The AI enhances their prepared thoughts and testimony - it does not replace personal spiritual preparation. The user has provided their own research, personal story, and Church sources, showing they have built their own testimony first.
+PURPOSE: This tool helps members who have already done their spiritual preparation. The AI enhances their prepared thoughts and testimony — it does not replace personal spiritual preparation.
 
 RESPONSE FORMAT:
-Provide the talk content in a clear, readable format with proper paragraphs and transitions. Include a suggested title at the beginning and mandatory sources section at the end.`
+First line: the talk title (plain text, no quotes or formatting)
+Then a blank line
+Then the full talk content as flowing paragraphs
+Then a blank line followed by a Sources section listing all referenced URLs`
         }
 
         // Create user message with the formatted prompt
@@ -1117,14 +1179,19 @@ function processAIResponse(aiContent: string, fallbackTopic: string): {
     // Extract content starting after the title
     let content = lines.slice(contentStartIndex).join('\n\n')
 
-    // Clean up markdown formatting in content
+    // Strip ALL markdown formatting from content
     content = content
-        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove **bold** formatting
-        .replace(/\*(.*?)\*/g, '$1') // Remove *italic* formatting  
-        .replace(/__(.*?)__/g, '$1') // Remove __bold__ formatting
-        .replace(/_(.*?)_/g, '$1') // Remove _italic_ formatting
-        .replace(/`(.*?)`/g, '$1') // Remove `code` formatting
-        .replace(/#{1,6}\s*/g, '') // Remove markdown headers
+        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove **bold**
+        .replace(/\*(.*?)\*/g, '$1') // Remove *italic*
+        .replace(/__(.*?)__/g, '$1') // Remove __bold__
+        .replace(/_(.*?)_/g, '$1') // Remove _italic_
+        .replace(/`(.*?)`/g, '$1') // Remove `code`
+        .replace(/^#{1,6}\s+(.*)$/gm, '$1') // Remove # headers, keep text
+        .replace(/^---+$/gm, '') // Remove --- horizontal rules
+        .replace(/^===+$/gm, '') // Remove === horizontal rules
+        .replace(/^\s*[-*]\s+/gm, '') // Remove leading bullet points (- or *)
+        .replace(/^\s*\d+\.\s+/gm, '') // Remove numbered list markers (1. 2. etc.)
+        .replace(/\n{3,}/g, '\n\n') // Collapse multiple blank lines to at most 2
         .trim()
 
     return {

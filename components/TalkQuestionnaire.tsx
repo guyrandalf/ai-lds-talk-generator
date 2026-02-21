@@ -6,7 +6,6 @@ import { FormLoadingOverlay } from "@/components/ui/LoadingOverlay"
 import { EnhancedButton } from "@/components/ui/EnhancedFormComponents"
 import CustomThemeInput from "@/components/CustomThemeInput"
 import AudienceContextSelector from "@/components/AudienceContextSelector"
-import PersonalStoryHelper from "@/components/PersonalStoryHelper"
 
 import type { TalkQuestionnaire } from "@/lib/types/talks/generation"
 import { BaseComponentProps, LoadingProps } from "@/lib/types/components/common"
@@ -30,13 +29,15 @@ export default function TalkQuestionnaire({
     duration: 15,
     meetingType: "sacrament",
     personalStory: "",
+    testimony: "",
     gospelLibraryLinks: [""],
-    audienceType: "",
+    audienceType: "general",
     speakerAge: "",
     preferredThemes: [],
     customThemes: [],
-    audienceContext: "",
-    specificScriptures: [""],
+    audienceContext: "local",
+    specificScriptures: [],
+    country: "",
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -91,9 +92,30 @@ export default function TalkQuestionnaire({
     }
   }
 
+  // Auto-select audience context based on meeting type
+  const getAutoSelectedAudienceContext = (meetingType: string): string => {
+    switch (meetingType) {
+      case "sacrament":
+      case "ward_conference":
+      case "ysa_devotional":
+      case "youth_fireside":
+      case "mission_conference":
+      case "senior_devotional":
+        return "local"
+      case "stake_conference":
+      case "area_devotional":
+        return "regional"
+      default:
+        return ""
+    }
+  }
+
   // Auto-select audience type for certain meeting types
   const getAutoSelectedAudience = (meetingType: string) => {
     switch (meetingType) {
+      case "sacrament":
+      case "ward_conference":
+        return "general"
       case "primary":
         return "primary"
       case "young_men_women":
@@ -275,11 +297,13 @@ export default function TalkQuestionnaire({
   // Handle meeting type change with auto-audience selection
   const handleMeetingTypeChange = (meetingType: string) => {
     const autoAudience = getAutoSelectedAudience(meetingType)
+    const autoContext = getAutoSelectedAudienceContext(meetingType)
 
     setFormData((prev) => ({
       ...prev,
       meetingType: meetingType as typeof formData.meetingType,
       audienceType: autoAudience || prev.audienceType,
+      audienceContext: autoContext || prev.audienceContext,
     }))
 
     // Clear error when user changes selection
@@ -348,11 +372,9 @@ export default function TalkQuestionnaire({
       )
       if (validLinks.length === 0) return false
 
-      // Required: At least one specific scripture
-      const validScriptures = (formData.specificScriptures || []).filter(
-        (scripture) => scripture?.trim(),
-      )
-      if (validScriptures.length === 0) return false
+      // Required: Personal testimony
+      if (!formData.testimony?.trim() || formData.testimony.trim().length < 10)
+        return false
 
       // Required: At least one theme selected
       const totalThemes =
@@ -419,12 +441,10 @@ export default function TalkQuestionnaire({
         "At least one Gospel Library link is required to show your preparation."
     }
 
-    // Required: At least one specific scripture
-    const validScriptures =
-      formData.specificScriptures?.filter((scripture) => scripture.trim()) || []
-    if (validScriptures.length === 0) {
-      newErrors.specificScriptures =
-        "At least one specific scripture reference is required."
+    // Required: Personal testimony
+    if (!formData.testimony?.trim() || formData.testimony.trim().length < 10) {
+      newErrors.testimony =
+        "Please write your personal testimony (at least 10 characters)."
     }
 
     // Required: At least one theme selected
@@ -524,6 +544,36 @@ export default function TalkQuestionnaire({
               Help us create a meaningful talk that reflects your voice and
               testimony
             </p>
+          </div>
+
+          {/* Preparation Warning Banner */}
+          <div className="mx-6 mb-6 bg-amber-50 border-l-4 border-amber-500 rounded-r-xl p-5 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 mt-0.5">
+                <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-amber-800 mb-1">
+                  Have You Prepared?
+                </h3>
+                <p className="text-sm text-amber-700 leading-relaxed mb-2">
+                  This tool is designed to <strong>assist</strong> you, not replace your personal study and preparation.
+                  Before generating a talk, please make sure you have:
+                </p>
+                <ul className="text-sm text-amber-700 space-y-1 mb-3 list-disc list-inside">
+                  <li>Searched the scriptures and studied your topic prayerfully</li>
+                  <li>Read relevant General Conference talks and Church resources</li>
+                  <li>Reflected on personal experiences related to your topic</li>
+                  <li>Sought the guidance of the Holy Ghost in your preparation</li>
+                </ul>
+                <p className="text-sm text-amber-800 font-medium italic">
+                  Remember: AI cannot build, replace, or strengthen your testimony. Your sincere study, prayer, and personal
+                  experiences are what make a talk truly meaningful and spirit-filled.
+                </p>
+              </div>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -725,6 +775,30 @@ export default function TalkQuestionnaire({
                     </div>
                   </div>
                 </div>
+
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="country"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Country where talk is being given{" "}
+                    <span className="text-gray-400 text-xs">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="country"
+                    value={formData.country || ""}
+                    onChange={(e) =>
+                      handleInputChange("country", e.target.value)
+                    }
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="e.g., Nigeria, United States, Brazil, Philippines..."
+                    disabled={isLoading}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Helps the AI use culturally relevant examples and avoid references that don&apos;t apply in your area.
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -785,22 +859,6 @@ export default function TalkQuestionnaire({
                   <span className="text-red-500 ml-1">*</span>
                 </label>
 
-                {/* Personal Story Helper */}
-                {formData.topic && (
-                  <div className="mb-4">
-                    <PersonalStoryHelper
-                      topic={formData.topic}
-                      onSuggestionClick={(suggestion) => {
-                        const currentStory = formData.personalStory || ""
-                        const newStory = currentStory
-                          ? `${currentStory}\n\n${suggestion}: `
-                          : `${suggestion}: `
-                        handleInputChange("personalStory", newStory)
-                      }}
-                    />
-                  </div>
-                )}
-
                 <textarea
                   id="personalStory"
                   rows={6}
@@ -823,13 +881,86 @@ export default function TalkQuestionnaire({
                   </p>
                 )}
 
-                <div className="text-sm text-gray-600 mt-2">
-                  <p>
-                    💡 <strong>Tip:</strong> Use the helper above for
-                    inspiration, then write in your own words about your
-                    personal experiences and insights.
-                  </p>
+              </div>
+            </div>
+
+            {/* Personal Testimony - Required */}
+            <div className="bg-yellow-50 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <svg
+                  className="w-5 h-5 mr-2 text-yellow-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                  />
+                </svg>
+                Your Personal Testimony
+                <span className="text-red-500 ml-1">*</span>
+              </h2>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <div className="flex">
+                  <svg
+                    className="w-5 h-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <div className="text-sm text-blue-800">
+                    <p className="font-medium mb-1">Your words, not the AI&apos;s:</p>
+                    <p>
+                      Write your testimony in your own words. The AI will use these exact words (grammar corrected only) to close your talk. It will NOT invent or replace your testimony.
+                    </p>
+                  </div>
                 </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="testimony"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Write your personal testimony
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
+
+                <textarea
+                  id="testimony"
+                  rows={5}
+                  required
+                  value={formData.testimony || ""}
+                  onChange={(e) =>
+                    handleInputChange("testimony", e.target.value)
+                  }
+                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-colors resize-none ${
+                    errors.testimony
+                      ? "border-red-300 focus:border-red-500"
+                      : "border-gray-300 focus:border-yellow-500"
+                  }`}
+                  placeholder="Write your personal testimony in your own words. The AI will use these exact words (grammar corrected) to close your talk..."
+                  disabled={isLoading}
+                />
+                {errors.testimony && (
+                  <p className="text-red-600 text-sm mt-1">
+                    {errors.testimony}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Write naturally — this is your testimony. The AI won&apos;t invent one; it will use yours.
+                </p>
               </div>
             </div>
 
@@ -850,18 +981,14 @@ export default function TalkQuestionnaire({
                   />
                 </svg>
                 Sources & Scriptures
-                <span className="text-red-500 ml-1">*</span>
               </h2>
 
               <div className="bg-amber-50 rounded-lg p-2 mb-4">
                 <div className="flex">
                   <div className="text-sm text-amber-800">
-                    <p className="font-bold mb-1">STRICT REQUIREMENT:</p>
+                    <p className="font-bold mb-1">Gospel Library links are required:</p>
                     <p>
-                      You must provide at least one official Church source
-                      (Gospel Library link) and at least one specific scripture
-                      reference. This ensures doctrinal accuracy and shows your
-                      preparation.
+                      Provide at least one official Church source link. The AI will read the full content of those pages, including any scriptures within them. Adding extra scripture references below is optional.
                     </p>
                   </div>
                 </div>
@@ -953,11 +1080,14 @@ export default function TalkQuestionnaire({
                   </button>
                 </div>
 
-                {/* Specific scriptures (moved into this combined section) */}
+                {/* Additional scriptures - optional */}
                 <div>
-                  <p className="text-sm text-gray-600 mb-2">
-                    List specific scriptures you&apos;d like to reference (e.g.,
-                    &quot;John 3:16&quot;).
+                  <p className="text-sm font-medium text-gray-700 mb-1">
+                    Additional scripture references{" "}
+                    <span className="text-gray-400 text-xs font-normal">(optional)</span>
+                  </p>
+                  <p className="text-sm text-gray-500 mb-2">
+                    The Church links above already contain scriptures. Add extra references here only if needed (e.g., &quot;John 3:16&quot;, &quot;2 Nephi 2:25&quot;).
                   </p>
                   {errors.specificScriptures && (
                     <p className="text-red-600 text-sm font-medium">
@@ -1152,13 +1282,19 @@ export default function TalkQuestionnaire({
                 </p>
               )}
 
-              <AudienceContextSelector
-                selectedContext={formData.audienceContext}
-                onContextChange={(contextId) =>
-                  handleInputChange("audienceContext", contextId)
-                }
-                disabled={isLoading}
-              />
+              {getAutoSelectedAudienceContext(formData.meetingType) ? (
+                <div className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                  Audience context automatically set to <strong>{getAutoSelectedAudienceContext(formData.meetingType) === "local" ? "Local Congregation" : "Regional/Stake Conference"}</strong> based on your meeting type.
+                </div>
+              ) : (
+                <AudienceContextSelector
+                  selectedContext={formData.audienceContext}
+                  onContextChange={(contextId) =>
+                    handleInputChange("audienceContext", contextId)
+                  }
+                  disabled={isLoading}
+                />
+              )}
             </div>
 
             {/* Specific Scriptures moved into combined Sources & Scriptures section above */}

@@ -8,14 +8,15 @@ import { AsyncErrorBoundary } from '@/components/ui/AsyncErrorBoundary'
 import { getUserRecentTalks } from '@/lib/actions/talks'
 
 export default async function DashboardPage() {
-    const user = await getCurrentUser()
+    const [user, talksResult] = await Promise.all([
+        getCurrentUser(),
+        getUserRecentTalks(3),
+    ])
 
     if (!user) {
         redirect('/auth/login')
     }
 
-    // Get initial data for SSR, but components will load independently
-    const talksResult = await getUserRecentTalks(3) // Only get 3 recent talks for dashboard
     const initialTalks = talksResult.success ? talksResult.data || [] : []
 
     return (

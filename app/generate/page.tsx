@@ -3,30 +3,12 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
-import type { TalkQuestionnaire } from '@/lib/types/talks/generation'
+import type { TalkQuestionnaire as TalkQuestionnaireData } from '@/lib/types/talks/generation'
 import TalkDisplayWrapper from '@/components/TalkDisplayWrapper'
 import { TalkGenerationBreadcrumb } from '@/components/Breadcrumb'
 import UnsavedChangesDialog from '@/components/UnsavedChangesDialog'
 import { TalkGenerationProgress } from '@/components/ui/ProgressBar'
-import { withLazyLoading } from '@/components/ui/LazyLoader'
-import { Skeleton } from '@/components/ui/skeleton'
-
-const TalkQuestionnaire = withLazyLoading(
-    () => import('@/components/TalkQuestionnaire'),
-    {
-        fallback: (
-            <div className="space-y-8">
-                <Skeleton className="h-8 w-48" />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                </div>
-                <Skeleton className="h-32 w-full" />
-                <Skeleton className="h-12 w-full" />
-            </div>
-        )
-    }
-)
+import TalkQuestionnaire from '@/components/TalkQuestionnaire'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useGuardedNavigation } from '@/hooks/useGuardedNavigation'
 import { generateTalk } from '@/lib/actions/talks'
@@ -65,7 +47,7 @@ function GeneratePageContent() {
         navigationGuard.setUnsavedChanges(!!hasUnsavedTalk)
     }, [currentStep, generatedTalk, navigationGuard.setUnsavedChanges])
 
-    const handleQuestionnaireSubmit = async (data: TalkQuestionnaire) => {
+    const handleQuestionnaireSubmit = async (data: TalkQuestionnaireData) => {
         setCurrentStep('generating')
         setError(null)
         setGenerationProgress(0)
