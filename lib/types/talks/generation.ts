@@ -53,6 +53,9 @@ export interface TalkPreferences {
     audienceType?: string;
     preferredThemes?: string[];
     specificScriptures?: string[];
+    speakerAge?: string;
+    testimony?: string;
+    country?: string;
 }
 
 export interface ProcessedQuestionnaireResult {

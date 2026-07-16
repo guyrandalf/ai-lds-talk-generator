@@ -777,13 +777,13 @@ The speaker is a youth (12-18 years old). Please:
 - If no personal story is provided, reference experiences like seminary lessons, youth activities, service projects, or testimony-building moments
 - Avoid overly mature language or experiences that don't fit their age`
       } else if (questionnaire.speakerAge.includes("Young Adult")) {
-        ageGuidance = `SPEAKER AGE GUIDANCE:
-The speaker is a Young Single Adult (YSA, 18-35 years old) — a single adult, NOT a teenager or youth. Please:
-- Use contemporary but reverent language appropriate for an adult
-- Include examples relevant to young adult life: college, university, career, job searching, mission service, institute, dating, marriage preparation, living independently, navigating faith as an adult
-- Focus on gospel principles for life transitions: building testimonies independently, preparing for eternal marriage, developing spiritual maturity
-- NEVER reference high school, seminary class schedules, youth activities, or teenage experiences — this speaker is an adult
-- If no personal story is provided, reference young adult experiences like serving a mission, attending institute, navigating early adulthood with faith, or preparing for temple covenants`
+        ageGuidance = `SPEAKER AGE GUIDANCE (this shapes the speaker's VOICE only, not who the talk is addressed to):
+The speaker is a Young Single Adult (YSA, 18-35 years old), a single adult, not a teenager or youth. Please:
+- Let the speaker's voice sound like a thoughtful adult, using contemporary but reverent language
+- When the speaker shares their OWN experiences, they may draw from young adult life (college, career, mission service, institute, building an independent testimony), since those are experiences this speaker would authentically have
+- Do NOT have the speaker claim high school, seminary class, or teenage experiences as their own, they are an adult
+- If no personal story is provided, reference young adult experiences the speaker could plausibly have
+- This does NOT make the talk a "YSA talk". The message, examples, and applications must fit the AUDIENCE specified above, not the speaker's own age`
       } else {
         ageGuidance = `SPEAKER AGE GUIDANCE:
 The speaker is an adult (36+ years old). Please:
@@ -794,6 +794,10 @@ The speaker is an adult (36+ years old). Please:
       }
 
       promptSections.push(ageGuidance)
+
+      // Speaker age must never override the chosen audience
+      promptSections.push(`AUDIENCE VS SPEAKER (CRITICAL):
+The AUDIENCE specified above decides who this talk is written for and which examples, stories, and applications will resonate. The speaker's age only affects the speaker's personal voice and the experiences they personally share. Do NOT narrow the whole talk to the speaker's own age group. If the audience is a general congregation (for example a sacrament meeting), speak to people of all ages and life circumstances, even when the speaker is a young single adult. A young speaker addressing a general congregation is still giving a talk for everyone, not a talk about young adult life.`)
     }
 
     // Personal story integration
@@ -2526,6 +2530,9 @@ export async function updateSavedTalk(
           audienceType: updates.questionnaire.audienceType,
           preferredThemes: updates.questionnaire.preferredThemes,
           specificScriptures: updates.questionnaire.specificScriptures,
+          speakerAge: updates.questionnaire.speakerAge,
+          testimony: updates.questionnaire.testimony,
+          country: updates.questionnaire.country,
         }
       }
 
@@ -2637,6 +2644,10 @@ export async function getSavedTalkById(
           specificScriptures:
             (savedTalk.preferences as TalkPreferences)?.specificScriptures ||
             [],
+          speakerAge: (savedTalk.preferences as TalkPreferences)?.speakerAge,
+          testimony:
+            (savedTalk.preferences as TalkPreferences)?.testimony || "",
+          country: (savedTalk.preferences as TalkPreferences)?.country || "",
         },
         createdAt: savedTalk.createdAt,
       }
