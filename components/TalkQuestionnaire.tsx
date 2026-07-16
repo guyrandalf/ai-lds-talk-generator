@@ -42,6 +42,32 @@ export default function TalkQuestionnaire({
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  // Raw text of the duration field so it can be cleared/retyped freely while
+  // editing. formData.duration stays the numeric source of truth for submit.
+  const [durationInput, setDurationInput] = useState(String(formData.duration))
+
+  const DURATION_MIN = 5
+  const DURATION_MAX = 60
+  const DURATION_DEFAULT = 15
+
+  const handleDurationChange = (raw: string) => {
+    // Keep only digits so intermediate states like "" are allowed
+    const digits = raw.replace(/[^0-9]/g, "")
+    setDurationInput(digits)
+    const parsed = parseInt(digits, 10)
+    // 0 when empty/invalid so submit validation flags it; never snaps the field
+    handleInputChange("duration", Number.isNaN(parsed) ? 0 : parsed)
+  }
+
+  const handleDurationBlur = () => {
+    const parsed = parseInt(durationInput, 10)
+    const clamped = Number.isNaN(parsed)
+      ? DURATION_DEFAULT
+      : Math.min(DURATION_MAX, Math.max(DURATION_MIN, parsed))
+    setDurationInput(String(clamped))
+    handleInputChange("duration", clamped)
+  }
+
   const allAudienceTypes = [
     { value: "general", label: "General Congregation" },
     { value: "primary", label: "Primary (3-11)" },
@@ -633,15 +659,12 @@ export default function TalkQuestionnaire({
                   <input
                     type="number"
                     id="duration"
+                    inputMode="numeric"
                     min="5"
                     max="60"
-                    value={formData.duration}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "duration",
-                        parseInt(e.target.value) || 15,
-                      )
-                    }
+                    value={durationInput}
+                    onChange={(e) => handleDurationChange(e.target.value)}
+                    onBlur={handleDurationBlur}
                     className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
                       errors.duration
                         ? "border-red-300 focus:border-red-500"
@@ -650,6 +673,9 @@ export default function TalkQuestionnaire({
                     disabled={isLoading}
                     required
                   />
+                  <p className="text-gray-500 text-xs mt-1">
+                    Between {DURATION_MIN} and {DURATION_MAX} minutes
+                  </p>
                   {errors.duration && (
                     <p className="text-red-600 text-sm mt-1">
                       {errors.duration}
