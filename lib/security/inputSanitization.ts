@@ -152,6 +152,11 @@ export async function sanitizeInput(
  }
  }
 
+ // Normalize name casing before HTML escaping, while apostrophes are still literal
+ if (type === 'name') {
+ sanitized = normalizeNameCasing(sanitized)
+ }
+
  // Handle HTML content
  if (!allowHTML) {
  // Escape HTML entities
@@ -180,6 +185,8 @@ export async function sanitizeInput(
  // Type-specific validation
  switch (type) {
  case 'email':
+ // Emails are case-insensitive; store and compare in lowercase
+ sanitized = sanitized.toLowerCase()
  // Additional email validation
  if (sanitized && !isValidEmail(sanitized)) {
  errors.push('Invalid email format after sanitization')
@@ -341,6 +348,20 @@ export async function sanitizeJSONData(
  errors,
  warnings
  }
+}
+
+/**
+ * Fixes all-caps or all-lowercase name input; preserves deliberate mixed case (McDonald)
+ */
+function normalizeNameCasing(name: string): string {
+ const collapsed = name.replace(/\s+/g, ' ').trim()
+ const isUniformCase = collapsed === collapsed.toUpperCase() || collapsed === collapsed.toLowerCase()
+ if (!isUniformCase) {
+ return collapsed
+ }
+ return collapsed
+ .toLowerCase()
+ .replace(/(^|[\s\-'])(\p{L})/gu, (_, sep: string, letter: string) => sep + letter.toUpperCase())
 }
 
 /**

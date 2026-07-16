@@ -6,82 +6,80 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
-  password  String   // Hashed with bcrypt
+  password  String // Hashed with bcrypt
   firstName String
   lastName  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   // Cumulative stats (persist even when talks are deleted)
-  totalTalksGenerated Int @default(0)  // Lifetime talks created
-  totalWordsWritten   Int @default(0)  // Lifetime words written
-  longestStreak       Int @default(0)  // Best streak achieved
-  
+  totalTalksGenerated Int @default(0) // Lifetime talks created
+  totalWordsWritten   Int @default(0) // Lifetime words written
+  longestStreak       Int @default(0) // Best streak achieved
+
   talks              Talk[]
   securityViolations SecurityViolation[]
   passwordResets     PasswordReset[]
-  sharedTalks        TalkShare[] @relation("SharedBy")
-  receivedShares     TalkShare[] @relation("SharedWith")
+  sharedTalks        TalkShare[]         @relation("SharedBy")
+  receivedShares     TalkShare[]         @relation("SharedWith")
 }
 
 model Talk {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   title       String
-  content     String   @db.Text
-  duration    Int      // Minutes
-  meetingType String   // Meeting type (sacrament, stake_conference, ward_conference, etc.)
+  content     String  @db.Text
+  duration    Int // Minutes
+  meetingType String // Meeting type (sacrament, stake_conference, ward_conference, etc.)
   topic       String?
-  
+
   // Questionnaire responses
   personalStory      String?  @db.Text
   gospelLibraryLinks String[] // Array of validated Church links
-  preferences        Json?    // Additional customization
-  
+  preferences        Json? // Additional customization
+
   // Enhanced questionnaire data
-  audienceContext    String?  // New field for audience targeting
-  customThemes       String[] // User-defined themes
-  
+  audienceContext String? // New field for audience targeting
+  customThemes    String[] // User-defined themes
+
   // Metadata
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relationships
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  shares      TalkShare[]
+  userId String
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shares TalkShare[]
 }
 
 model SecurityViolation {
-  id              String   @id @default(cuid())
-  type            String   // 'inappropriate_content' | 'manipulation_attempt' | 'spam' | 'policy_violation'
-  severity        String   // 'low' | 'medium' | 'high' | 'critical'
+  id              String  @id @default(cuid())
+  type            String // 'inappropriate_content' | 'manipulation_attempt' | 'spam' | 'policy_violation'
+  severity        String // 'low' | 'medium' | 'high' | 'critical'
   description     String
-  detectedPattern String   @db.Text
-  userInput       String?  @db.Text // The original input that triggered the violation
+  detectedPattern String  @db.Text
+  userInput       String? @db.Text // The original input that triggered the violation
   ipAddress       String?
   userAgent       String?
   sessionId       String?
-  
+
   // Rate limiting fields
   violationCount  Int      @default(1)
   lastViolationAt DateTime @default(now())
-  
+
   // Metadata
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relationships
-  userId          String?
-  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
   // Indexes for performance
   @@index([userId, type])
   @@index([createdAt])
@@ -95,9 +93,9 @@ model PasswordReset {
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Indexes for performance optimization
   @@index([token])
   @@index([userId])
@@ -106,23 +104,22 @@ model PasswordReset {
 }
 
 model TalkShare {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   talkId       String
   sharedById   String
   sharedWithId String
-  status       String   @default("pending") // "pending" | "accepted" | "declined"
-  message      String?  @db.Text // Optional message from sharer
-  createdAt    DateTime @default(now())
+  status       String    @default("pending") // "pending" | "accepted" | "declined"
+  message      String?   @db.Text // Optional message from sharer
+  createdAt    DateTime  @default(now())
   respondedAt  DateTime?
-  
+
   // Relationships
-  talk         Talk     @relation(fields: [talkId], references: [id], onDelete: Cascade)
-  sharedBy     User     @relation("SharedBy", fields: [sharedById], references: [id], onDelete: Cascade)
-  sharedWith   User     @relation("SharedWith", fields: [sharedWithId], references: [id], onDelete: Cascade)
-  
+  talk       Talk @relation(fields: [talkId], references: [id], onDelete: Cascade)
+  sharedBy   User @relation("SharedBy", fields: [sharedById], references: [id], onDelete: Cascade)
+  sharedWith User @relation("SharedWith", fields: [sharedWithId], references: [id], onDelete: Cascade)
+
   // Ensure unique sharing between users for the same talk
   @@unique([talkId, sharedById, sharedWithId])
-  
   // Indexes for performance
   @@index([sharedWithId, status])
   @@index([sharedById])
