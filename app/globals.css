@@ -20,6 +20,22 @@ textarea::placeholder {
   opacity: 0.6;
 }
 
+/*
+ * Prevent iOS Safari from auto-zooming (which visually widens the page) when a
+ * form field is focused. Safari zooms whenever the focused control's font-size
+ * is under 16px. Several inputs use text-sm/text-xs (14px/12px), so force a
+ * 16px minimum on touch devices. Scoped to coarse pointers so desktop keeps its
+ * intended sizing; !important is needed to win over Tailwind utility classes.
+ */
+@media (pointer: coarse) {
+
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Responsive typography improvements */
 @media (max-width: 640px) {
   h1 {
