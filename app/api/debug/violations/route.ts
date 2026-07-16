@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getRecentViolations, getViolationById } from '@/lib/security/violationLogger'
-import { getSession } from '@/lib/actions/auth'
+import { isCurrentUserAdmin } from '@/lib/actions/auth'
 
 export async function GET(request: NextRequest) {
     try {
-        // Check if user is authenticated (you might want to add admin check here)
-        const session = await getSession()
-        if (!session) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        // Violation logs contain other users' inputs and IPs: admins only.
+        if (!(await isCurrentUserAdmin())) {
+            return NextResponse.json({ error: 'Not found' }, { status: 404 })
         }
 
         const { searchParams } = new URL(request.url)

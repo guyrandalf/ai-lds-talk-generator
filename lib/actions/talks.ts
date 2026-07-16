@@ -3104,6 +3104,18 @@ export async function respondToSharedTalk(
 }
 
 /**
+ * Masks an email for display: jane.doe@gmail.com -> ja***@gmail.com
+ */
+function maskEmail(email: string): string {
+  const atIndex = email.lastIndexOf("@")
+  if (atIndex <= 0) return "***"
+  const local = email.slice(0, atIndex)
+  const domain = email.slice(atIndex)
+  const visible = local.slice(0, Math.min(2, local.length))
+  return `${visible}***${domain}`
+}
+
+/**
  * Searches for users by email or name (for sharing functionality)
  */
 export async function searchUsers(
@@ -3271,9 +3283,19 @@ export async function searchUsers(
         return aFullName.localeCompare(bFullName)
       })
 
+      // Mask emails before returning so a logged-in client cannot harvest the
+      // full address book by searching common substrings. The masked form is
+      // still enough for a searcher to recognize someone they know.
+      const maskedUsers = sortedUsers.map((user) => ({
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: maskEmail(user.email),
+      }))
+
       return {
         success: true,
-        users: sortedUsers,
+        users: maskedUsers,
       }
     } catch (error) {
       console.error("Search users error:", error)

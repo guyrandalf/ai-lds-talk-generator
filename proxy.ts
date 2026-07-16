@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { verifySessionToken } from '@/lib/security/session'
 
 /**
  * Simplified middleware for Next.js 16 - Authentication and Security Headers only
@@ -61,17 +62,8 @@ async function handleAuthentication(request: NextRequest, pathname: string) {
     const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
     const isAuthRoute = authRoutes.some(route => pathname.startsWith(route))
 
-    // Check if user has a valid session
-    let isAuthenticated = false
-    if (sessionCookie) {
-        try {
-            const sessionData = JSON.parse(Buffer.from(sessionCookie.value, 'base64').toString())
-            isAuthenticated = Date.now() < sessionData.expires
-        } catch {
-            // Invalid session cookie
-            isAuthenticated = false
-        }
-    }
+    // Check if user has a valid, signed session
+    const isAuthenticated = verifySessionToken(sessionCookie?.value) !== null
 
     // Redirect unauthenticated users from protected routes
     if (isProtectedRoute && !isAuthenticated) {

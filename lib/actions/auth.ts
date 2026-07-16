@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { prisma } from '../db'
 import { sanitizeInput } from '../security/inputSanitization'
+import { createSessionToken, verifySessionToken } from '../security/session'
 import { ApiResponse } from '../types/api/responses'
 import { BaseUser } from '../types/auth/user'
 
@@ -72,13 +73,11 @@ export async function registerUser(formData: FormData): Promise<ApiResponse<Base
         const validatedData = registerSchema.parse(sanitizedData)
 
         // Check if user already exists
-        console.log('Checking for existing user with email:', validatedData.email)
         const existingUser = await prisma.user.findUnique({
             where: { email: validatedData.email }
         })
 
         if (existingUser) {
-            console.log('User already exists')
             return {
                 success: false,
                 error: 'An account with this email already exists'
@@ -86,11 +85,9 @@ export async function registerUser(formData: FormData): Promise<ApiResponse<Base
         }
 
         // Hash password
-        console.log('Hashing password...')
-        const hashedPassword = await bcrypt.hash(validatedData.password, 10)
+        const hashedPassword = await bcrypt.hash(validatedData.password, 12)
 
         // Create user
-        console.log('Creating user...')
         const user = await prisma.user.create({
             data: {
                 email: validatedData.email,
@@ -105,7 +102,6 @@ export async function registerUser(formData: FormData): Promise<ApiResponse<Base
                 lastName: true,
             }
         })
-        console.log('User created successfully:', user.email)
 
         // Create session
         await createSession(user.id)
@@ -158,13 +154,14 @@ export async function loginUser(formData: FormData): Promise<ApiResponse<BaseUse
         const validatedData = loginSchema.parse(sanitizedData)
 
         // Find user
-        console.log('Looking for user with email:', validatedData.email)
         const user = await prisma.user.findUnique({
             where: { email: validatedData.email }
         })
 
-        console.log('User found:', user ? 'Yes' : 'No')
         if (!user) {
+            // Hash a throwaway value so response timing does not reveal whether
+            // the email exists (mitigates user enumeration via timing).
+            await bcrypt.compare(validatedData.password, '$2a$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinva')
             return {
                 success: false,
                 error: 'Invalid email or password'
@@ -172,9 +169,7 @@ export async function loginUser(formData: FormData): Promise<ApiResponse<BaseUse
         }
 
         // Verify password
-        console.log('Comparing password...')
         const isValidPassword = await bcrypt.compare(validatedData.password, user.password)
-        console.log('Password valid:', isValidPassword)
 
         if (!isValidPassword) {
             return {
@@ -221,8 +216,8 @@ export async function logoutUser(): Promise<void> {
 async function createSession(userId: string): Promise<void> {
     const cookieStore = await cookies()
 
-    // Simple session token (in production, use JWT or more secure method)
-    const sessionToken = Buffer.from(JSON.stringify({ userId, expires: Date.now() + 7 * 24 * 60 * 60 * 1000 })).toString('base64')
+    // HMAC-signed token so the cookie cannot be forged to impersonate a user
+    const sessionToken = createSessionToken(userId)
 
     cookieStore.set('session', sessionToken, {
         httpOnly: true,
@@ -233,25 +228,15 @@ async function createSession(userId: string): Promise<void> {
 }
 
 export async function getSession(): Promise<{ userId: string } | null> {
-    try {
-        const cookieStore = await cookies()
-        const sessionCookie = cookieStore.get('session')
+    const cookieStore = await cookies()
+    const sessionCookie = cookieStore.get('session')
 
-        if (!sessionCookie) {
-            return null
-        }
-
-        const sessionData = JSON.parse(Buffer.from(sessionCookie.value, 'base64').toString())
-
-        // Check if session is expired
-        if (Date.now() > sessionData.expires) {
-            return null
-        }
-
-        return { userId: sessionData.userId }
-    } catch {
+    const payload = verifySessionToken(sessionCookie?.value)
+    if (!payload) {
         return null
     }
+
+    return { userId: payload.userId }
 }
 
 export async function getCurrentUser(): Promise<BaseUser | null> {
@@ -290,6 +275,22 @@ export async function getCurrentUser(): Promise<BaseUser | null> {
     } catch {
         return null
     }
+}
+
+/**
+ * True only if the logged-in user's email is in the ADMIN_EMAILS allowlist.
+ * Used to gate access to sensitive operational data (e.g. violation logs).
+ */
+export async function isCurrentUserAdmin(): Promise<boolean> {
+    const user = await getCurrentUser()
+    if (!user) return false
+
+    const admins = (process.env.ADMIN_EMAILS || '')
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean)
+
+    return admins.includes(user.email.toLowerCase())
 }
 
 export async function updateProfile(formData: FormData): Promise<ApiResponse<BaseUser>> {
