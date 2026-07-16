@@ -1101,6 +1101,8 @@ ABSOLUTE FORMATTING RULES — NO EXCEPTIONS:
 - NO horizontal rules (---)
 - NO markdown of any kind
 - Emphasis must come through word choice and sentence structure, not formatting
+- NO em dashes (—) anywhere in the talk. Instead use a comma, a colon, a period with a new sentence, or parentheses
+- Write in full, complete, grammatically correct sentences. Do not use sentence fragments or clipped phrases
 - The talk should read exactly as it would be spoken — just paragraphs separated by blank lines
 
 DURATION COMPLIANCE:
